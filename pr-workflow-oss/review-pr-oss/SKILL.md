@@ -23,6 +23,31 @@ you don't own) — no internal CODEOWNERS scope, no Jira/Collibra conventions ap
    `git diff <base>...<head> --name-only`, full diff via `gh pr diff <number>`.
 4. Clean up worktree (`git worktree remove`) when finished.
 
+### Determine Review Mode (Full vs. Incremental)
+Identify the account posting this review: `gh api user -q .login` (call it `<me>`; reused in Step 5).
+
+Check whether `<me>` has reviewed this PR before, and at what commit:
+```bash
+gh api graphql -f query='
+query($owner:String!,$repo:String!,$number:Int!) {
+  repository(owner:$owner, name:$repo) {
+    pullRequest(number:$number) {
+      reviews(first:100, states:[COMMENTED,APPROVED,CHANGES_REQUESTED]) {
+        nodes { author { login } submittedAt commit { oid } }
+      }
+    }
+  }
+}' -f owner=<owner> -f repo=<repo> -F number=<number>
+```
+Filter nodes to `author.login == <me>`, take the one with the latest `submittedAt`, call its `commit.oid` `<lastReviewSha>`.
+
+- **No prior review by `<me>`**: full review. Diff range for hunting new findings is `<base>...<head>` (as above).
+- **Prior review exists and `<lastReviewSha> != <head>`**: incremental re-review. Diff range for hunting new findings is `<lastReviewSha>...<head>` instead — get it with `git diff <lastReviewSha>...<head> --name-only` inside the worktree (fetch `<lastReviewSha>` into the worktree first if it's not already present: `git fetch origin <lastReviewSha>`).
+  - If that `git diff` fails (e.g. `<lastReviewSha>` was rewritten by a force-push/rebase and is unreachable), fall back to the full `<base>...<head>` range and say so in Step 8 — don't guess a range.
+- **Prior review exists and `<lastReviewSha> == <head>`**: nothing has changed since `<me>`'s last review. Skip straight to Step 5 (existing threads may still need a resolution check) with an empty new-findings diff.
+
+Call the resulting range `<huntBase>...<head>` for the rest of this skill.
+
 ## 2. Full-Diff Scope (No CODEOWNERS Gate)
 Review the entire diff — an OSS repo's CODEOWNERS (if any) marks notification routing, not review
 boundaries. Note in the report if a CODEOWNERS file exists and who else it flags for this diff.
@@ -36,20 +61,49 @@ Combine, in order of specificity:
   missing `Signed-off-by:` trailer as a blocking finding if the repo requires it.
 
 ## 4. Delegate Review
-Execute `pr-review-toolkit:review-pr` inside the worktree directory against the full
-`<base>...<head>` diff, passing the combined guidance from §3 as additional criteria. No external-team
-persona override — review as a knowledgeable maintainer/contributor.
+Execute `pr-review-toolkit:review-pr` inside the worktree directory against the `<huntBase>...<head>`
+diff (full `<base>...<head>` on a first pass, or the narrower incremental range on a re-review — see
+Step 1), passing the combined guidance from §3 as additional criteria. No external-team persona
+override — review as a knowledgeable maintainer/contributor. If `<huntBase>...<head>` is empty (nothing
+changed since `<me>`'s last review), skip delegation — there's nothing new to hunt for.
 
-## 5. Deduplicate Against Existing Comments
+## 5. Fetch Existing Threads, Deduplicate, and Check for Resolution
+Fetch review threads with resolution state via GraphQL (REST's `/comments` and `/reviews` don't expose
+`isResolved`/thread ids):
 ```bash
-gh api repos/<owner>/<repo>/pulls/<number>/comments
-gh api repos/<owner>/<repo>/pulls/<number>/reviews
+gh api graphql -f query='
+query($owner:String!,$repo:String!,$number:Int!,$after:String) {
+  repository(owner:$owner, name:$repo) {
+    pullRequest(number:$number) {
+      reviewThreads(first:100, after:$after) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id isResolved isOutdated path line
+          comments(first:20) { nodes { id body author { login } } }
+        }
+      }
+    }
+  }
+}' -f owner=<owner> -f repo=<repo> -F number=<number>
 ```
-Drop findings matching an existing comment on the same file/line/hunk; keep distinct new issues on the
-same line.
+Paginate with `after` while `hasNextPage` is true.
 
-## 6. Prepare Findings & Get Confirmation Before Posting
-Never call the GitHub API to post anything until the user has explicitly approved the exact content.
+**Dedup new findings**: drop draft findings matching the substance of any existing comment (from anyone)
+on the same file/line/hunk. Retain findings pointing out distinct, new issues on the same line.
+
+**Check my own prior unresolved threads for resolution**: for each thread where `isResolved: false` and
+the first comment's `author.login == <me>`, read the current state of `path` around `line` in the
+worktree and judge whether the code now addresses that comment's concern (fixed, removed, or moot).
+`isOutdated: true` is a signal the code there changed, but not proof — always re-read the current file,
+don't resolve on outdated-flag alone.
+- Never evaluate or resolve threads authored by anyone other than `<me>` — a thread you didn't raise
+  isn't yours to close, on any repo, regardless of maintainer status.
+- Build a list of `{threadId, path, line, originalComment, verdict: addressed|not-addressed, reasoning}`
+  for my own threads only.
+
+## 6. Prepare Findings & Resolutions, Get Confirmation Before Acting
+Never call the GitHub API to post or resolve anything until the user has explicitly approved the exact
+content/list.
 
 1. Get the head commit SHA: `gh pr view <number> --json headRefOid -q .headRefOid`.
 2. For each finding, resolve `path`, `line` (from the file in the worktree, not hand-counted diff
@@ -67,11 +121,13 @@ Never call the GitHub API to post anything until the user has explicitly approve
      ]
    }
    ```
-5. Show the user the full draft before posting: every inline comment rendered as
-   `path:line — **label**: text`, plus any top-level-only comments. This is the actual content to be
-   posted, not a paraphrase.
+5. Show the user the full draft before posting or resolving anything:
+   - Every new inline comment rendered as `path:line — **label**: text`, plus any top-level-only comments.
+   - Every thread proposed for resolution, rendered as `path:line — original: "<short quote>" → addressed: <one-line reasoning>`.
+   This is the actual content/action to be posted/resolved, not a paraphrase.
 6. Stop and wait for approval. Anything other than a clear go-ahead is a revision request — edit and
-   re-show the draft.
+   re-show the draft. Approving new comments does not imply approving resolutions (and vice versa) — the
+   user can accept one list and reject the other.
 
 Findings Format:
 - Group by severity: Critical / Important / Suggestions.
@@ -79,13 +135,21 @@ Findings Format:
 - Labels: **issue**, **suggestion**, **nit**, **question**.
 - No raw tool transcripts, long code blocks, or section headers like "Impact:".
 
-## 7. Post Findings as Inline PR Comments
+## 7. Post Findings and Resolve Addressed Threads
 Only after approval:
 1. Batch into one review call: `gh api repos/<owner>/<repo>/pulls/<number>/reviews --input review.json`.
    If the API rejects an empty `body` for `event: "COMMENT"`, drop the batch and post each inline
    finding individually via `gh api repos/<owner>/<repo>/pulls/<number>/comments` instead.
 2. Post any approved top-level-only findings via `gh pr comment`.
+3. Resolve each approved thread:
+   ```bash
+   gh api graphql -f query='mutation($threadId:ID!) { resolveReviewThread(input:{threadId:$threadId}) { thread { isResolved } } }' -f threadId=<id>
+   ```
+   Resolve one thread per call; don't batch resolutions into the same mutation as unrelated threads. If
+   a mutation fails (e.g. thread already resolved by someone else in the meantime), skip it and note it
+   in Step 8 rather than retrying blindly.
 
 ## 8. Report to User
-Short chat summary: counts by severity, link to the review (`html_url`), sign-off/CLA status, and
-number of dropped duplicate findings.
+Short chat summary: counts by severity, link to the review (`html_url`), sign-off/CLA status, review
+mode (full or incremental, noting any fallback), number of dropped duplicate findings, and number of my
+own threads resolved this pass (and any that failed to resolve).
