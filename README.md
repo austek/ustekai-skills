@@ -1,4 +1,4 @@
-# claude-skills
+# ustekai-skills
 
 Personal Claude Code skills and commands, packaged as a plugin marketplace.
 
@@ -7,7 +7,7 @@ Personal Claude Code skills and commands, packaged as a plugin marketplace.
 In Claude Code:
 
 ```
-/plugin marketplace add austek/claude-skills
+/plugin marketplace add austek/ustekai-skills
 ```
 
 Then enable whichever plugins you want:
@@ -28,14 +28,14 @@ Refresh the marketplace, then update each installed plugin. Restart Claude Code
 afterwards.
 
 ```
-/plugin marketplace update claude-skills
+/plugin marketplace update ustekai-skills
 ```
 
 or from a shell:
 
 ```
-claude plugin marketplace update claude-skills
-claude plugin update dev-utilities@claude-skills
+claude plugin marketplace update ustekai-skills
+claude plugin update dev-utilities@ustekai-skills
 ```
 
 Claude Code caches each plugin by the `version` in `.claude-plugin/marketplace.json`.
