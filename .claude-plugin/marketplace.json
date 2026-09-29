@@ -61,7 +61,7 @@
     {
       "name": "dev-utilities",
       "description": "IDE MCP tool selection, comment cleanup, code-claim verification, business analysis.",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
