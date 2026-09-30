@@ -19,6 +19,15 @@ gh pr view --json number,url,headRefName,baseRefName,headRepositoryOwner,isCross
 ```
 Work in the actual checkout (not a worktree) — fixes get committed and pushed from here.
 
+## 1a. Freshness
+A PR behind its base runs CI against stale code, so rebase before polling:
+```bash
+gh pr view <number> --repo <owner>/<repo> --json mergeStateStatus,baseRefName -q '.mergeStateStatus+" "+.baseRefName'
+```
+On `BEHIND` (or `DIRTY`): `git fetch origin && git rebase origin/<base>`, rebuild and test locally, then show the
+user the result. Push with `--force-with-lease=<branch>:<old-sha>` only after approval (§4 rule). Stop and report on
+conflicts; never resolve them silently. Re-check at the start of every §8 loop.
+
 ## 2. CI Status
 Poll checks (same pattern as `create-pr-oss` §7):
 ```bash
@@ -40,6 +49,16 @@ For each failing check, pull the actual failure, not just the red X:
 gh run list --repo <owner>/<repo> --branch <branch> --json databaseId,workflowName,conclusion --jq '.[] | select(.conclusion=="failure")'
 gh run view <run-id> --repo <owner>/<repo> --log-failed
 ```
+
+### Sonar
+A passing SonarCloud check does not mean zero new issues: the quality gate tolerates some. When the repo uses
+Sonar (a `SonarCloud` check or `sonar-project.properties`), list the issues on the PR and add them to the work set:
+```bash
+gh api "https://sonarcloud.io/api/issues/search?pullRequest=<number>&componentKeys=<project-key>&resolved=false" \
+  --jq '.issues[] | {rule, severity, component, line, message}'
+```
+Or use the `sonarqube:sonar-list-issues` skill. Fix the issue, or draft a justification for the user when it is a
+false positive. Never suppress a rule to clear the list.
 
 ## 3. Fetch Reviewer Feedback
 Inline threads with resolve state (REST doesn't expose `isResolved` — use GraphQL):
@@ -105,6 +124,8 @@ remain, and no drafted reply is still pending send. Report anything still open a
 comment, flaky/still-failing check, waiting on a maintainer reply) rather than declaring it landed.
 
 ## 9. Pre-Completion Checklist
+- [ ] Branch rebased on the latest base when `BEHIND`; force push approved by the user (§1a).
+- [ ] Sonar issues on the PR listed and fixed or justified, not just the gate status (§2 Sonar).
 - [ ] Every failing check root-caused (log pulled), not just retried blind.
 - [ ] Docs check re-run against the full PR diff; flagged to the user if source changed with no
       doc file touched (§6).
