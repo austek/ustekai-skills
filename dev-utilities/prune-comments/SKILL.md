@@ -42,13 +42,14 @@ Instead of leaving comments, you must apply these transformations:
   1. Remove the construct if it is dead (empty `else`, empty override that only calls nothing).
   2. Give a swallowed error real handling: log, rethrow, or return an error value. Never turn a documented "ignore" into a silent swallow.
   3. Name the intent: extract a no-op helper (`ignoreShutdownFailure()`, `noOp()`), or rename the method/type so the emptiness is expected.
-  4. Use the language's explicit empty form (`pass`, `...`, `()`, `{}`, `todo!()`/`unimplemented!()` for stubs) only when 1-3 do not apply.
+  4. Use the language's explicit empty form (`pass`, `...`, `()`, `{}`, `todo!()`/`unimplemented!()` for stubs) only when 1-3 do not apply. In languages with block comments (Java, Kotlin, Scala, C-family), the empty form is `{ /* no-op */ }` so linters that demand a non-empty body (Sonar `S1186`, `S108`) pass.
 
 ## What never gets touched
 
 - License/copyright headers.
 - `SAFETY:` / `# Safety` comments strictly required above `unsafe` blocks.
 - Formal doc comments (`///`, `/** */`, docstrings) — these define API contracts and are out of scope.
+- `/* no-op */` block comments that are the sole content of an otherwise-empty body. Never add other block comments; never rewrite this one.
 - Test-structure markers: `Given`, `When`, `Then` (also `Arrange`/`Act`/`Assert`) comments in test files, including forms like `// given`, `# When: ...`, `// then - ...`. Keep them in place and do not rewrite them.
 
 ## Process
