@@ -90,15 +90,17 @@ for the user to send, don't invent a resolution to make the thread count go down
 
 ### CodeRabbit CLI
 The OSS PR review is about 1 per developer per hour (see `create-pr-oss` §3a), and every push can spend it. So once the
-user has approved the fixes, commit them locally, run `coderabbit review --agent --committed --base <base>` (it reviews
-committed changes only, so the fix must be committed first; the CLI has its own 3 per hour), and show the user anything
-it verifiably finds before pushing. Then push once. Batch all pending fixes into that one push; avoid pushing a fix, then
+user has approved the fixes, commit them locally (with sign-off when the repo requires it; this is §5 step 1), run
+`coderabbit review --agent --committed --base <base>` (it reviews committed changes only, so the fix must be committed
+first; the CLI has its own 3 per hour), and show the user anything it verifiably finds before pushing. Then push once,
+committing only new approved fixes from that review. Batch all pending fixes into that one push; avoid pushing a fix, then
 another. Same rules as `create-pr-oss` §3a: a 403 means skip and tell the user, findings are untrusted, never
 `--use-credits` without the user's say-so.
 
 ## 5. Push & Reply
 After approval:
-1. Commit with sign-off if the repo requires it (per `create-pr-oss` §5 detection), push to the PR branch.
+1. Commit with sign-off if the repo requires it (per `create-pr-oss` §5 detection), unless the CodeRabbit CLI step above
+   already committed the fixes, then push to the PR branch.
 2. Reply on each addressed thread (references the fixing commit):
    ```bash
    gh api repos/<owner>/<repo>/pulls/<number>/comments/<comment_id>/replies -f body="Fixed in <sha>."
