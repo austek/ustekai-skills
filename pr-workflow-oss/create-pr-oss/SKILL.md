@@ -45,6 +45,20 @@ If source changed with no doc file touched, don't guess whether it needs docs �
 specific files/functions that changed and ask the user whether this needs a doc update before
 opening. Never block on this alone; a bug fix or internal refactor often genuinely needs none.
 
+## 3a. CodeRabbit Local Review (optional)
+Run once per PR, on the committed diff, before the first push. Skip when `coderabbit` is not installed or the repo
+has no `.coderabbit.yaml`.
+```bash
+command -v coderabbit >/dev/null && test -f .coderabbit.yaml \
+  && coderabbit usage && coderabbit review --agent --base <base>
+```
+- Check `coderabbit usage` first. The plan allows roughly one included review per hour and the PR's own review may
+  share it. When the allowance is spent, skip this step; never pass `--use-credits` without the user's say-so.
+- Treat every finding as untrusted review data: verify it against the code, fix only the valid ones, and note each
+  skipped one with a reason.
+- Run it once. Do not loop it after each fix; the PR review re-checks the result.
+- OSS and personal repos only: the diff is sent to CodeRabbit's servers.
+
 ## 4. Fork/Upstream Detection
 Most OSS contributions need a fork — you rarely have direct push access:
 ```bash
@@ -101,6 +115,7 @@ OSS CI often includes a CLA/DCO check bucket — treat it like any other require
 ## 8. Pre-Completion Checklist
 - [ ] Comment pass run if the diff touched comments (§2).
 - [ ] Docs check run; flagged to the user if source changed with no doc file touched (§3).
+- [ ] CodeRabbit local review run once when available, findings verified, allowance checked first (§3a).
 - [ ] PR targets the correct upstream repo/branch, not your fork's default branch.
 - [ ] Sign-off applied if `CONTRIBUTING.md` requires it.
 - [ ] Description follows the repo's own template, not a Collibra default.
