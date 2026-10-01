@@ -89,11 +89,11 @@ single fix) is not something to silently code around — draft a reply instead a
 for the user to send, don't invent a resolution to make the thread count go down.
 
 ### CodeRabbit CLI
-After fixing a CodeRabbit PR comment, do not re-run `coderabbit review` by default: it spends the allowance the PR
+After fixing a CodeRabbit PR comment, do not re-run `coderabbit review` by default: it may spend the allowance the PR
 review shares to re-check a fix the PR review will see anyway. Run `coderabbit review --agent --committed --base <base>`
-once, before the push, only when the fix pass changes more than the lines the thread named, and only after
-`coderabbit usage` shows allowance left. Verify its findings like any other review data; never pass `--use-credits`
-without the user's say-so.
+once, before the push, only when the fix pass changes more than the lines the thread named and `coderabbit auth status`
+shows the repo owner's org as active (see `create-pr-oss` §3a for the 403 case). Verify its findings like any other
+review data; never pass `--use-credits` without the user's say-so.
 
 ## 5. Push & Reply
 After approval:
@@ -140,5 +140,5 @@ comment, flaky/still-failing check, waiting on a maintainer reply) rather than d
 - [ ] Debatable/ambiguous comments left open with a drafted reply, not silently resolved.
 - [ ] Every issue the PR should close has its own closing keyword in the description
       (`Closes #1, closes #2`, never `Closes #1, #2`; cross-repo as `closes owner/repo#3`).
-- [ ] CodeRabbit CLI not re-run after trivial thread fixes; when run, the allowance was checked first.
+- [ ] CodeRabbit CLI not re-run after trivial thread fixes; when run, the repo owner's org was the active one.
 - [ ] User approved every push before it happened.
