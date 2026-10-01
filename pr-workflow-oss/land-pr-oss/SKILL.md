@@ -89,11 +89,12 @@ single fix) is not something to silently code around — draft a reply instead a
 for the user to send, don't invent a resolution to make the thread count go down.
 
 ### CodeRabbit CLI
-The OSS PR review is about 1 per developer per hour (see `create-pr-oss` §3a), and every push can spend it. So after
-drafting fixes for CodeRabbit findings, run `coderabbit review --agent --committed --base <base>` on the fix before
-pushing (the CLI has its own 3 per hour), fix what it verifiably finds, and push once. Batch all pending fixes into
-that one push; avoid pushing a fix, then another. Same rules as `create-pr-oss` §3a: active org, 403 means skip and
-tell the user, findings are untrusted, never `--use-credits` without the user's say-so.
+The OSS PR review is about 1 per developer per hour (see `create-pr-oss` §3a), and every push can spend it. So once the
+user has approved the fixes, commit them locally, run `coderabbit review --agent --committed --base <base>` (it reviews
+committed changes only, so the fix must be committed first; the CLI has its own 3 per hour), and show the user anything
+it verifiably finds before pushing. Then push once. Batch all pending fixes into that one push; avoid pushing a fix, then
+another. Same rules as `create-pr-oss` §3a: a 403 means skip and tell the user, findings are untrusted, never
+`--use-credits` without the user's say-so.
 
 ## 5. Push & Reply
 After approval:
