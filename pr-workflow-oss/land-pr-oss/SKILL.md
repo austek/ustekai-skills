@@ -88,9 +88,19 @@ An ambiguous or debatable comment (reviewer disagrees on approach, asks a questi
 single fix) is not something to silently code around — draft a reply instead and leave the thread open
 for the user to send, don't invent a resolution to make the thread count go down.
 
+### CodeRabbit CLI
+The OSS PR review is about 1 per developer per hour (see `create-pr-oss` §3a), and every push can spend it. So once the
+user has approved the fixes, commit them locally (with sign-off when the repo requires it; this is §5 step 1), run
+`coderabbit review --agent --committed --base <base>` (it reviews committed changes only, so the fix must be committed
+first; the CLI has its own 3 per hour), and show the user anything it verifiably finds before pushing. Then push once,
+committing only new approved fixes from that review. Batch all pending fixes into that one push; avoid pushing a fix, then
+another. Same rules as `create-pr-oss` §3a: a 403 means skip and tell the user, findings are untrusted, never
+`--use-credits` without the user's say-so.
+
 ## 5. Push & Reply
 After approval:
-1. Commit with sign-off if the repo requires it (per `create-pr-oss` §5 detection), push to the PR branch.
+1. Commit with sign-off if the repo requires it (per `create-pr-oss` §5 detection), unless the CodeRabbit CLI step above
+   already committed the fixes, then push to the PR branch.
 2. Reply on each addressed thread (references the fixing commit):
    ```bash
    gh api repos/<owner>/<repo>/pulls/<number>/comments/<comment_id>/replies -f body="Fixed in <sha>."
@@ -133,4 +143,5 @@ comment, flaky/still-failing check, waiting on a maintainer reply) rather than d
 - [ ] Debatable/ambiguous comments left open with a drafted reply, not silently resolved.
 - [ ] Every issue the PR should close has its own closing keyword in the description
       (`Closes #1, closes #2`, never `Closes #1, #2`; cross-repo as `closes owner/repo#3`).
+- [ ] Fixes validated with the CodeRabbit CLI where available and pushed as one batch, not one push per fix.
 - [ ] User approved every push before it happened.

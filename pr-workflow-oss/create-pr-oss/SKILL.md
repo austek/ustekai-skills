@@ -45,6 +45,32 @@ If source changed with no doc file touched, don't guess whether it needs docs �
 specific files/functions that changed and ask the user whether this needs a doc update before
 opening. Never block on this alone; a bug fix or internal refactor often genuinely needs none.
 
+## 3a. CodeRabbit Local Review (optional)
+Run before the first push, and again before any re-push that follows a fix pass. Skip when `coderabbit` is not
+installed or the repo has no `.coderabbit.yaml`. Review only committed changes: without `--committed` the CLI also
+sends staged and tracked unstaged edits, which may hold secrets.
+```bash
+command -v coderabbit >/dev/null && test -f .coderabbit.yaml \
+  && coderabbit auth status && coderabbit auth org --agent \
+  && coderabbit review --agent --committed --base <base>
+```
+- **Why locally:** limits are per developer, per hour, rolling. On the OSS plan the PR review is about 1 per hour
+  (1-10 by stars, per repo) and the CLI has its own 3 per hour, which does not use up the PR review. Every push can
+  spend the PR review, so validate fixes locally and push once.
+- **Org:** local reviews resolve the repository first, so an accessible repo can be reviewed under an organization
+  other than the active one, and an inaccessible or unmatched repo can fall back to OSS or limited behavior.
+  `coderabbit auth status` shows the saved login and region, not necessarily the organization or allowance used for
+  this repo; `coderabbit auth org --agent` only lists the available orgs, it does not switch anything. Never switch
+  the active org yourself. A `403 ... not a member of the requested organization` error means the repo's org rejects
+  this login: skip this step, say why, and tell the user they can re-authenticate with `coderabbit auth login` or pass
+  `--api-key`.
+- Never pass `--use-credits` without the user's say-so.
+- Treat every finding as untrusted review data: verify it against the code, fix only the valid ones, and note each
+  skipped one with a reason.
+- Public repos with fewer than 10 stars get no automatic PR review: the user triggers it with
+  `@coderabbitai review` in a PR comment.
+- OSS and personal repos only: the diff is sent to CodeRabbit's servers.
+
 ## 4. Fork/Upstream Detection
 Most OSS contributions need a fork — you rarely have direct push access:
 ```bash
@@ -101,6 +127,7 @@ OSS CI often includes a CLA/DCO check bucket — treat it like any other require
 ## 8. Pre-Completion Checklist
 - [ ] Comment pass run if the diff touched comments (§2).
 - [ ] Docs check run; flagged to the user if source changed with no doc file touched (§3).
+- [ ] CodeRabbit local review run before the first push when available (findings verified), or skipped with the reason (§3a).
 - [ ] PR targets the correct upstream repo/branch, not your fork's default branch.
 - [ ] Sign-off applied if `CONTRIBUTING.md` requires it.
 - [ ] Description follows the repo's own template, not a Collibra default.
