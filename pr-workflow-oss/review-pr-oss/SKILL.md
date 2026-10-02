@@ -3,7 +3,8 @@ name: review-pr-oss
 description: >-
   Review a PR on a personal or open-source GitHub repo. No CODEOWNERS/team scoping — reviews the full
   diff, detects languages, applies the repo's own CONTRIBUTING.md/CLAUDE.md rules + language persona
-  skills, checks DCO/CLA sign-off, and delegates to pr-review-toolkit:review-pr.
+  skills, checks DCO/CLA sign-off, and delegates to pr-review-toolkit:review-pr. Use for "review this PR"
+  or "review PR #N" on a non-Collibra repo.
 ---
 
 # Reviewing a PR on a Personal/OSS Repo
