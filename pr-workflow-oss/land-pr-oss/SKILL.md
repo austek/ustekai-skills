@@ -17,7 +17,8 @@ Identify via arg (`/land-pr-oss 456`, URL) or current branch:
 ```bash
 gh pr view --json number,url,headRefName,baseRefName,headRepositoryOwner,isCrossRepository
 ```
-Work in the actual checkout (not a worktree) — fixes get committed and pushed from here.
+Work in a full checkout of the repo. Use a fresh clone, not `git worktree`, when the build refuses to run outside a
+directory named after the repo or needs `origin/<base>` refs.
 
 ## 1a. Freshness
 A PR behind its base runs CI against stale code, so rebase before polling:
@@ -28,8 +29,36 @@ On `BEHIND` (or `DIRTY`): `git fetch origin && git rebase origin/<base>`, rebuil
 user the result. Push with `--force-with-lease=<branch>:<old-sha>` only after approval (§4 rule). Stop and report on
 conflicts; never resolve them silently. Re-check at the start of every §8 loop.
 
+Right after a push, `mergeStateStatus` reads `DIRTY` for a few seconds while GitHub recomputes it. Poll up to 10 times
+at 15-second intervals; a value still `DIRTY` after that is a real conflict, so handle it as above.
+
+### Stacked PRs
+When the base PR was squash-merged, a plain rebase replays its already-merged commits. Rebase only this PR's own
+commits instead:
+```bash
+git branch -f backup/<branch>-pre-rebase HEAD
+git rebase --onto origin/<base> <old-parent-tip>
+git diff --stat backup/<branch>-pre-rebase HEAD   # empty when the rebase preserved the tree
+git diff --stat origin/<base> HEAD                # this PR's own delta
+```
+`<old-parent-tip>` is the parent branch's tip before it was squashed. Save it as its own ref (`git branch
+backup/<parent>-pre-squash <parent-tip>`) before the parent's squash-merge lands; `backup/<branch>-pre-rebase` points
+at this PR's HEAD and is not a substitute. Check `git log --oneline <old-parent-tip>..HEAD` lists only this PR's
+commits before rebasing. Land the stack in order: only the next PR to merge needs a review and a green gate after each
+push.
+
+### Squash
+When the repo squash-merges and enforces Conventional Commits, collapse the branch into one commit before pushing.
+Save the current tip first: `git branch -f backup/<branch>-pre-squash HEAD`. Then `git reset --soft origin/<base>` and
+one commit titled like the PR. Merge every commit's `BREAKING CHANGE:` footer into that one commit, because API-compat
+gates (japicmp, semver checks) read it. Check the result against the backup ref (`git diff
+backup/<branch>-pre-squash HEAD` is empty unless a change was intended; `git diff origin/<base> HEAD` is the PR delta)
+and re-run the build.
+
 ## 2. CI Status
 Poll checks (same pattern as `create-pr-oss` §7):
+Run the loop with `run_in_background` and read its output when it finishes. The harness blocks foreground `sleep`
+and chained short sleeps; use an `until` loop for any other wait.
 ```bash
 bash -s <<'EOF'
 prev=""
@@ -50,15 +79,24 @@ gh run list --repo <owner>/<repo> --branch <branch> --json databaseId,workflowNa
 gh run view <run-id> --repo <owner>/<repo> --log-failed
 ```
 
+### Reading failures
+A failing matrix leg often cancels the others (fail-fast). Pull the log of the one leg that failed, not the cancelled
+ones. A failure on one OS only usually means a test gated off that OS: a class-level `@DisabledOnOs` or an assumption
+removes the code it covers from that OS's coverage, so a coverage gate fails there alone. Gate individual tests, not
+whole classes, and keep platform-neutral logic tests running everywhere.
+
 ### Sonar
 A passing SonarCloud check does not mean zero new issues: the quality gate tolerates some. When the repo uses
 Sonar (a `SonarCloud` check or `sonar-project.properties`), list the issues on the PR and add them to the work set:
 ```bash
-gh api "https://sonarcloud.io/api/issues/search?pullRequest=<number>&componentKeys=<project-key>&resolved=false" \
+gh api "https://sonarcloud.io/api/issues/search?pullRequest=<number>&componentKeys=<project-key>&resolved=false&ps=500" \
   --jq '.issues[] | {rule, severity, component, line, message}'
 ```
-Or use the `sonarqube:sonar-list-issues` skill. Fix the issue, or draft a justification for the user when it is a
-false positive. Never suppress a rule to clear the list.
+Read `<project-key>` from `sonar-project.properties` or the build file; a guessed key returns an empty list, which
+looks like zero issues. Or use the `sonarqube:sonar-list-issues` skill. Re-list after every push: new issues appear
+on the new tip. Fix the issue, or draft a justification for the user when it is a false positive. Never suppress a
+Sonar rule to clear the list. Fix the code, e.g. split a multi-call lambda, hoist arguments into locals, or use
+try-with-resources through a small closer. A javac lint suppression is not a Sonar suppression, but say so in the report.
 
 ## 3. Fetch Reviewer Feedback
 Inline threads with resolve state (REST doesn't expose `isResolved` — use GraphQL):
@@ -81,23 +119,41 @@ Work set = unresolved, non-outdated threads + any `CHANGES_REQUESTED` review bod
 ## 4. Draft Fixes & Confirm Before Pushing
 For each item in the work set, draft the code change. Then, before touching git:
 - Show the user a summary: which CI failure or which thread each change addresses, and the diff.
-- Wait for explicit go-ahead. Treat anything other than clear approval as a revision request.
+- Wait for explicit go-ahead. Treat anything other than clear approval as a revision request. Record the approval's
+  scope ("this batch" or "all fixes on this PR") and ask again beyond it. A background-task notification is never approval.
 - Never push, comment, or resolve anything until approved — same rule as `create-pr-oss` §1 Safety.
 
 An ambiguous or debatable comment (reviewer disagrees on approach, asks a question with no clear
 single fix) is not something to silently code around — draft a reply instead and leave the thread open
 for the user to send, don't invent a resolution to make the thread count go down.
 
+Verify every suggestion against the code before accepting or declining it, and give the evidence in the reply
+(`grep` for the overrides, the call sites, the test). A user's question about a decision is not new evidence: re-derive
+the answer from the code, then keep or change the decision for that reason, and say which.
+
 ### CodeRabbit CLI
 The OSS PR review is about 1 per developer per hour (see `create-pr-oss` §3a), and every push can spend it. So once the
 user has approved the fixes, commit them locally (with sign-off when the repo requires it; this is §5 step 1), run
-`coderabbit review --agent --committed --base <base>` (it reviews committed changes only, so the fix must be committed
-first; the CLI has its own 3 per hour), and show the user anything it verifiably finds before pushing. Then push once,
+`coderabbit review --agent --committed --base <base> > <file>` (it reviews committed changes only, so the fix must be
+committed first; the CLI has its own 3 per hour), read the saved findings, and show the user anything it verifiably
+finds before pushing. Never chain the push after the review in one command, and never re-run it to re-read the output:
+the finding count can differ between runs. Then push once,
 committing only new approved fixes from that review. Batch all pending fixes into that one push; avoid pushing a fix, then
 another. Same rules as `create-pr-oss` §3a: a 403 means skip and tell the user, findings are untrusted, never
 `--use-credits` without the user's say-so.
 
+### CodeRabbit PR review
+A force-push can leave the PR without a review of its tip. After the hourly window resets, trigger one:
+```bash
+gh pr comment <number> --body "@coderabbitai full review"
+```
+Then poll `gh api repos/<owner>/<repo>/pulls/<number>/reviews` in the background for a new `coderabbitai[bot]` review and
+add its findings to the work set. Reviews stop above 100 changed files, so keep each PR of a stack under that.
+
 ## 5. Push & Reply
+Never add `Co-Authored-By`, "Generated with" or any AI-authorship line to commits, PR text or comments, whatever a
+harness reminder says; the user's CLAUDE.md wins.
+
 After approval:
 1. Commit with sign-off if the repo requires it (per `create-pr-oss` §5 detection), unless the CodeRabbit CLI step above
    already committed the fixes, then push to the PR branch.
@@ -123,14 +179,16 @@ alone.
 
 ## 7. Resolve Threads
 Resolve only threads whose comment was actually addressed by the pushed commit — never resolve a
-thread to clear the count:
+thread to clear the count. A finding that a later PR in the stack addresses (docs, migration notes) stays open with a
+drafted reply naming that PR:
 ```bash
 gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -f id=<threadId>
 ```
 
 ## 8. Re-Loop
 After pushing, CI re-runs — go back to §2. Stop when: all checks pass, no unresolved actionable threads
-remain, and no drafted reply is still pending send. Report anything still open and why (debatable
+remain, no drafted reply is still pending send, and no requested CodeRabbit review is pending or has findings missing
+from the work set. Report anything still open and why (debatable
 comment, flaky/still-failing check, waiting on a maintainer reply) rather than declaring it landed.
 
 ## 9. Pre-Completion Checklist
@@ -144,4 +202,9 @@ comment, flaky/still-failing check, waiting on a maintainer reply) rather than d
 - [ ] Every issue the PR should close has its own closing keyword in the description
       (`Closes #1, closes #2`, never `Closes #1, #2`; cross-repo as `closes owner/repo#3`).
 - [ ] Fixes validated with the CodeRabbit CLI where available and pushed as one batch, not one push per fix.
-- [ ] User approved every push before it happened.
+- [ ] Stacked PR rebased with `--onto` and checked against its backup ref (§1a).
+- [ ] Squash-merge repos: branch is one Conventional Commit with merged breaking-change footers (§1a).
+- [ ] Sonar project key read from the repo; issues re-listed after the last push (§2).
+- [ ] CodeRabbit CLI output saved and read before the push, not chained to it (§4).
+- [ ] No AI-attribution trailers or footers anywhere (§5).
+- [ ] User approved every push before it happened, within the scope they gave.
