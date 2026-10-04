@@ -29,8 +29,8 @@ On `BEHIND` (or `DIRTY`): `git fetch origin && git rebase origin/<base>`, rebuil
 user the result. Push with `--force-with-lease=<branch>:<old-sha>` only after approval (§4 rule). Stop and report on
 conflicts; never resolve them silently. Re-check at the start of every §8 loop.
 
-Right after a push, `mergeStateStatus` reads `DIRTY` for a few seconds while GitHub recomputes it. Poll until it
-changes before reporting it.
+Right after a push, `mergeStateStatus` reads `DIRTY` for a few seconds while GitHub recomputes it. Poll up to 10 times
+at 15-second intervals; a value still `DIRTY` after that is a real conflict, so handle it as above.
 
 ### Stacked PRs
 When the base PR was squash-merged, a plain rebase replays its already-merged commits. Rebase only this PR's own
@@ -38,16 +38,21 @@ commits instead:
 ```bash
 git branch -f backup/<branch>-pre-rebase HEAD
 git rebase --onto origin/<base> <old-parent-tip>
-git diff --stat backup/<branch>-pre-rebase HEAD   # right after the rebase: only the parent PR's changes
+git diff --stat backup/<branch>-pre-rebase HEAD   # empty when the rebase preserved the tree
+git diff --stat origin/<base> HEAD                # this PR's own delta
 ```
-`<old-parent-tip>` is the parent branch's tip before it was squashed (a backup ref, or `git merge-base`). Land the stack
-in order: only the next PR to merge needs a review and a green gate after each push.
+`<old-parent-tip>` is the parent branch's tip before it was squashed. Save it as its own ref (`git branch
+backup/<parent>-pre-squash <parent-tip>`) before the parent's squash-merge lands; `backup/<branch>-pre-rebase` points
+at this PR's HEAD and is not a substitute. Check `git log --oneline <old-parent-tip>..HEAD` lists only this PR's
+commits before rebasing. Land the stack in order: only the next PR to merge needs a review and a green gate after each
+push.
 
 ### Squash
 When the repo squash-merges and enforces Conventional Commits, collapse the branch into one commit before pushing:
 `git reset --soft origin/<base>`, then one commit titled like the PR. Merge every commit's `BREAKING CHANGE:` footer
 into that one commit, because API-compat gates (japicmp, semver checks) read it. Check the result against the backup
-ref (`git diff backup HEAD` shows only intended changes) and re-run the build.
+ref (`git diff backup HEAD` is empty unless a change was intended; `git diff origin/<base> HEAD` is the PR delta) and
+re-run the build.
 
 ## 2. CI Status
 Poll checks (same pattern as `create-pr-oss` §7):
@@ -181,7 +186,8 @@ gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$
 
 ## 8. Re-Loop
 After pushing, CI re-runs — go back to §2. Stop when: all checks pass, no unresolved actionable threads
-remain, and no drafted reply is still pending send. Report anything still open and why (debatable
+remain, no drafted reply is still pending send, and no requested CodeRabbit review is pending or has findings missing
+from the work set. Report anything still open and why (debatable
 comment, flaky/still-failing check, waiting on a maintainer reply) rather than declaring it landed.
 
 ## 9. Pre-Completion Checklist

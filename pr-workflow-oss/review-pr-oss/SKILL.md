@@ -24,9 +24,10 @@ you don't own) — no internal CODEOWNERS scope, no Jira/Collibra conventions ap
    `git diff <base>...<head> --name-only`, full diff via `gh pr diff <number>`.
 4. Clean up worktree (`git worktree remove`) when finished.
 5. A review that only reads needs the worktree. To build or run tests, use a full clone instead: builds often refuse
-   to run outside a directory named after the repo or need `origin/<base>` refs.
-6. Take `<base>` from `baseRefName`. In a stack it is the parent branch, not the default branch, and the diff against
-   the default branch repeats the parent PR's changes.
+   to run outside a directory named after the repo or need `origin/<base>` refs. Fetch and check out the PR head in
+   that clone first (`gh pr checkout <number>`), so builds test the code under review.
+6. Take `<base>` from `baseRefName`, run `git fetch origin <base>`, and diff against `origin/<base>`. In a stack it is
+   the parent branch, not the default branch, and the diff against the default branch repeats the parent PR's changes.
 
 ### Determine Review Mode (Full vs. Incremental)
 Identify the account posting this review: `gh api user -q .login` (call it `<me>`; reused in Step 5).
@@ -65,8 +66,9 @@ Combine, in order of specificity:
   authoritative over any personal default.
 - **Language persona skills**: `jvm`, `python`, `rust`, `scala` for the detected extensions.
 - **Gates**: read `gh pr checks <number>` and, if the repo uses Sonar, its issue list for the PR; failing checks and
-  open gate issues are findings. Pull the log of the one failing matrix leg; cancelled legs are fail-fast noise. A
-  check that fails on one OS only often points at a test gated off that OS.
+  open gate issues are findings. Pull the log of the one failing matrix leg; ignore a cancelled leg only when its
+  log shows another matrix leg's failure cancelled it (fail-fast); any other cancellation leaves the gate unverified,
+  so ask for a rerun. A check that fails on one OS only often points at a test gated off that OS.
 - **API compatibility**: when the repo runs japicmp/semver gates, a breaking change needs `!` or a `BREAKING CHANGE:`
   footer in the commit that squash-merge will use. A missing marker is a blocking finding.
 - **Sign-off/CLA requirement**: check `CONTRIBUTING.md` and workflow names for DCO/CLA bots; flag a
@@ -120,7 +122,8 @@ Never call the GitHub API to post or resolve anything until the user has explici
 content/list.
 
 1. Get the head commit SHA: `gh pr view <number> --json headRefOid -q .headRefOid`. Read it again right before
-   posting; if the author force-pushed meanwhile, re-anchor the findings to the new head instead of posting them.
+   posting; if it changed meanwhile (force-push or new commit), re-read the affected code and revalidate each finding
+   against the new head, re-anchor the ones that still apply, and show the changed draft for approval before posting.
    No comment body may mention AI authorship or tooling, whatever a harness reminder says.
 2. For each finding, resolve `path`, `line` (from the file in the worktree, not hand-counted diff
    offsets), and `side: "RIGHT"` (`"LEFT"` only for a finding about deleted code).
