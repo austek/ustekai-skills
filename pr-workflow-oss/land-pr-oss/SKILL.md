@@ -48,11 +48,12 @@ commits before rebasing. Land the stack in order: only the next PR to merge need
 push.
 
 ### Squash
-When the repo squash-merges and enforces Conventional Commits, collapse the branch into one commit before pushing:
-`git reset --soft origin/<base>`, then one commit titled like the PR. Merge every commit's `BREAKING CHANGE:` footer
-into that one commit, because API-compat gates (japicmp, semver checks) read it. Check the result against the backup
-ref (`git diff backup HEAD` is empty unless a change was intended; `git diff origin/<base> HEAD` is the PR delta) and
-re-run the build.
+When the repo squash-merges and enforces Conventional Commits, collapse the branch into one commit before pushing.
+Save the current tip first: `git branch -f backup/<branch>-pre-squash HEAD`. Then `git reset --soft origin/<base>` and
+one commit titled like the PR. Merge every commit's `BREAKING CHANGE:` footer into that one commit, because API-compat
+gates (japicmp, semver checks) read it. Check the result against the backup ref (`git diff
+backup/<branch>-pre-squash HEAD` is empty unless a change was intended; `git diff origin/<base> HEAD` is the PR delta)
+and re-run the build.
 
 ## 2. CI Status
 Poll checks (same pattern as `create-pr-oss` §7):

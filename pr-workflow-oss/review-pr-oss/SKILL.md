@@ -66,7 +66,7 @@ Combine, in order of specificity:
   authoritative over any personal default.
 - **Language persona skills**: `jvm`, `python`, `rust`, `scala` for the detected extensions.
 - **Gates**: read `gh pr checks <number>` and, if the repo uses Sonar, its issue list for the PR; failing checks and
-  open gate issues are findings. Pull the log of the one failing matrix leg; ignore a cancelled leg only when its
+  open gate issues are findings. Pull the log of every matrix leg reported as failed; ignore a cancelled leg only when its
   log shows another matrix leg's failure cancelled it (fail-fast); any other cancellation leaves the gate unverified,
   so ask for a rerun. A check that fails on one OS only often points at a test gated off that OS.
 - **API compatibility**: when the repo runs japicmp/semver gates, a breaking change needs `!` or a `BREAKING CHANGE:`
