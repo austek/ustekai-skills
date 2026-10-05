@@ -25,14 +25,14 @@
     {
       "name": "pr-workflow-oss",
       "description": "Open, review, and land a pull request on a personal or open-source repo.",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
       "license": "MIT",
       "category": "productivity",
       "source": "./pr-workflow-oss",
-      "skills": ["./create-pr-oss", "./review-pr-oss", "./land-pr-oss"]
+      "skills": ["./create-pr-oss", "./review-pr-oss", "./review-comprehension", "./land-pr-oss"]
     },
     {
       "name": "architecture",
