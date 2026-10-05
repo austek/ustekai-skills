@@ -26,7 +26,7 @@ The host skill provides a 12-field context record:
 
 **Skipping:** The user may type `skip` at any prompt to skip a phase. Skips are recorded in the output but never penalized. No phase blocks posting or resolving.
 
-**Area Definition:** An `area` is the module directory (the nearest ancestor path containing a build file or area `CLAUDE.md`). If neither exists, use the top-level path segment. Example: `iam/iam-session`.
+**Area Definition:** An `area` is the module directory: the nearest ancestor path containing a build file, an area `CLAUDE.md`, or a plugin manifest directory (`.claude-plugin/`). If none exists, use the top-level path segment. Examples: `iam/iam-session`, `claude/plugins/.curated/data-product`.
 
 **Log Rules:** Read the calibration log at `$HOME/.claude/scratches/review-calibration.jsonl`. Tolerate unparsable lines and treat them as empty. Append new records using `>>` with one JSON object per line.
 
