@@ -36,15 +36,15 @@
     },
     {
       "name": "architecture",
-      "description": "Deep-module design, domain modeling, and codebase architecture improvement.",
-      "version": "1.0.0",
+      "description": "Deep-module design, domain modeling, codebase architecture improvement, spikes, design docs, and repo scaffolding from a reference.",
+      "version": "1.1.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
       "license": "MIT",
       "category": "productivity",
       "source": "./architecture",
-      "skills": ["./codebase-design", "./domain-modeling", "./improve-codebase-architecture"]
+      "skills": ["./codebase-design", "./domain-modeling", "./improve-codebase-architecture", "./spike", "./design-doc", "./scaffold-from-reference"]
     },
     {
       "name": "productivity",
