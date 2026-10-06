@@ -15,8 +15,8 @@ Then enable whichever plugins you want:
 - `language-personas` — Java/Python/Rust/Scala coding-standards, testing, and
   tooling personas, plus a JVM systems mentor and a polyglot tutor.
 - `pr-workflow-oss` — open/review/land a PR on a personal or open-source repo.
-- `architecture` — deep-module design, domain modeling, and architecture
-  improvement skills.
+- `architecture` — deep-module design, domain modeling, architecture
+  improvement, spikes, design docs, and scaffolding a repo from a reference.
 - `productivity` — plan-sharpening interviews, agent handoffs, and
   questionnaire generation.
 - `dev-utilities` — misc skills: IDE MCP tool selection, comment
