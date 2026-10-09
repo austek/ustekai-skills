@@ -17,7 +17,7 @@ someone else wrote the PR.
 1. Identify PR via arg (`/review-pr-oss 456`, URL, branch) or current branch
    (`gh pr view --json number,url,headRefName,baseRefName`). With no arg and no PR on the current branch, list
    open PRs awaiting review from your teams and let the user pick:
-   `gh api -X GET search/issues -f q='is:pr is:open team-review-requested-user:@me'`.
+   `gh api -X GET search/issues --paginate -f per_page=100 -f q='is:pr is:open team-review-requested-user:@me' --jq '.items[] | "\(.html_url) \(.title)"'`.
 2. Materialize in an isolated worktree:
    ```bash
    git fetch origin pull/<number>/head:review-pr-<number>
@@ -68,10 +68,12 @@ boundaries. Note in the report if a CODEOWNERS file exists and who else it flags
 teams' CODEOWNERS paths". Pick full if the user doesn't answer.
 
 **Team scope**: `--team <@org/team>` uses that handle (ask for it if the user chose the option without
-naming one). `--my-teams` lists the handles with `gh api user/teams --jq '.[] | "@\(.organization.login)/\(.slug)"'`
-(needs `read:org`) and keeps those in the PR's org. Find CODEOWNERS (root, `.github/` or `docs/`) and grep the handles:
-- `* <team>` -> Entire repo is in scope.
-- Specific patterns -> Match changed files using `.gitignore` semantics.
+naming one). `--my-teams` lists the handles with `gh api user/teams --paginate --jq '.[] | "@\(.organization.login)/\(.slug)"'`
+(needs `read:org`) and keeps those in the PR's org. Resolve ownership the way GitHub does:
+- Read CODEOWNERS from `<base>` (`git show origin/<base>:<path>`), not the PR head, so a PR cannot change its own scope.
+- Use the first file that exists, in the order `.github/CODEOWNERS`, `CODEOWNERS`, `docs/CODEOWNERS`.
+- For each changed path, the last matching pattern (`.gitignore` semantics) decides its owners. A later rule overrides an earlier `* <team>`.
+- A path is in scope when that last match lists a selected handle.
 
 Team scope fallbacks:
 - **No CODEOWNERS or no line for the team(s)**: Review the full diff and tell the user.
