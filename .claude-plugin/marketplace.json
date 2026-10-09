@@ -60,8 +60,8 @@
     },
     {
       "name": "dev-utilities",
-      "description": "IDE MCP tool selection, comment cleanup, code-claim verification, business analysis, HTML diff explanations.",
-      "version": "1.1.1",
+      "description": "IDE MCP tool selection, comment cleanup, code-claim verification, business analysis, HTML diff explanations, remote Claude sessions.",
+      "version": "1.2.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
@@ -71,7 +71,7 @@
       "skills": [
         "./claude-settings-split", "./idea-mcp-tools", "./nuke-comments",
         "./prune-comments", "./verifying-code-claims", "./business-analysis",
-        "./explain-diff-html"
+        "./explain-diff-html", "./claude-remote"
       ]
     }
   ]

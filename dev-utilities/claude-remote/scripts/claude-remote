@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Usage: claude-remote [--root DIR] <repo-name | /full/path>
+set -euo pipefail
+
+root="${CLAUDE_REMOTE_ROOT:-$HOME/Workspace}"
+settings="${CLAUDE_REMOTE_SETTINGS:-$HOME/.config/dotfiles/claude-profiles/claude_personal.json}"
+target=""
+
+while (( $# )); do
+  case "$1" in
+    --root) root="${2:?--root needs a directory}"; shift 2 ;;
+    -h|--help) sed -n '2p' "$0" | cut -c3-; exit 0 ;;
+    *) target="$1"; shift ;;
+  esac
+done
+[[ -n "$target" ]] || { echo "usage: claude-remote [--root DIR] <repo-name | /full/path>" >&2; exit 64; }
+
+root="${root/#\~/$HOME}"
+target="${target/#\~/$HOME}"
+
+resolve_path() {
+  [[ -d "$target" ]] || { echo "not a directory: $target" >&2; exit 1; }
+  realpath "$target"
+}
+
+resolve_name() {
+  [[ -d "$root" ]] || { echo "root not found: $root" >&2; exit 1; }
+  local repos exact fuzzy
+  mapfile -t repos < <(find "$root" -maxdepth 3 -name .git -prune -printf '%h\n' | sort)
+  exact=(); fuzzy=()
+  for r in "${repos[@]}"; do
+    local base="${r##*/}"
+    [[ "${base,,}" == "${target,,}" ]] && exact+=("$r")
+    [[ "${base,,}" == *"${target,,}"* ]] && fuzzy+=("$r")
+  done
+  local matches=("${exact[@]}")
+  (( ${#matches[@]} )) || matches=("${fuzzy[@]}")
+  case ${#matches[@]} in
+    0) echo "no git repo matches '$target' under $root" >&2; exit 1 ;;
+    1) echo "${matches[0]}" ;;
+    *) echo "ambiguous '$target':" >&2; printf '  %s\n' "${matches[@]}" >&2; exit 2 ;;
+  esac
+}
+
+if [[ "$target" == */* || "$target" == . || "$target" == .. ]]; then
+  path="$(resolve_path)"
+else
+  path="$(resolve_name)"
+fi
+
+name="${path##*/}"
+session="claude-${name//[.:]/_}"
+
+if tmux has-session -t "$session" 2>/dev/null; then
+  echo "reusing session $session"
+else
+  args=(claude --remote-control "$name")
+  [[ -f "$settings" ]] && args+=(--settings "$settings")
+  tmux new-session -d -s "$session" -c "$path" "$(printf '%q ' "${args[@]}")"
+  echo "started session $session"
+fi
+
+echo "repo:   $path"
+echo "attach: tmux attach -t $session"
