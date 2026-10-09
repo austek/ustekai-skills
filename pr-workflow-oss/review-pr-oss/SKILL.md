@@ -1,20 +1,23 @@
 ---
 name: review-pr-oss
 description: >-
-  Review a PR on a personal or open-source GitHub repo. No CODEOWNERS/team scoping — reviews the full
-  diff, detects languages, applies the repo's own CONTRIBUTING.md/CLAUDE.md rules + language persona
-  skills, checks DCO/CLA sign-off, and delegates to pr-review-toolkit:review-pr. Use for "review this PR"
-  or "review PR #N" on a non-Collibra repo.
+  Review a PR on any GitHub repo. Reviews the full diff by default; offers to scope review to the files
+  owned by a team (`--team`) or by your own teams (`--my-teams`) in CODEOWNERS. Detects languages, applies
+  the repo's own CONTRIBUTING.md/CLAUDE.md/.claude/rules rules + language persona skills, checks DCO/CLA
+  sign-off, and delegates to pr-review-toolkit:review-pr. Use for "review this PR" or "review PR #N".
 ---
 
-# Reviewing a PR on a Personal/OSS Repo
+# Reviewing a PR
 
 Default posture: maintainer reviewing an external contribution (or a fellow contributor's PR on a repo
-you don't own) — no internal CODEOWNERS scope, no Jira/Collibra conventions apply.
+you don't own). With `--external`, review as a Senior Staff / Principal external reviewer who assumes
+someone else wrote the PR.
 
 ## 1. Resolve PR & Materialize Diff
 1. Identify PR via arg (`/review-pr-oss 456`, URL, branch) or current branch
-   (`gh pr view --json number,url,headRefName,baseRefName`).
+   (`gh pr view --json number,url,headRefName,baseRefName`). With no arg and no PR on the current branch, list
+   open PRs awaiting review from your teams and let the user pick:
+   `gh api -X GET search/issues -f q='is:pr is:open team-review-requested-user:@me'`.
 2. Materialize in an isolated worktree:
    ```bash
    git fetch origin pull/<number>/head:review-pr-<number>
@@ -56,13 +59,27 @@ Filter nodes to `author.login == <me>`, take the one with the latest `submittedA
 
 Call the resulting range `<huntBase>...<head>` for the rest of this skill.
 
-## 2. Full-Diff Scope (No CODEOWNERS Gate)
-Review the entire diff — an OSS repo's CODEOWNERS (if any) marks notification routing, not review
+## 2. Determine Scope
+**Default**: review the entire `<base>...<head>` diff. CODEOWNERS marks notification routing, not review
 boundaries. Note in the report if a CODEOWNERS file exists and who else it flags for this diff.
+
+**Offer the choice**: unless the user already passed `--team`, `--my-teams` or stated a scope, ask once
+(AskUserQuestion) before reviewing: "Full PR (Recommended)", "Only a team's CODEOWNERS paths" or "Only my
+teams' CODEOWNERS paths". Pick full if the user doesn't answer.
+
+**Team scope**: `--team <@org/team>` uses that handle (ask for it if the user chose the option without
+naming one). `--my-teams` lists the handles with `gh api user/teams --jq '.[] | "@\(.organization.login)/\(.slug)"'`
+(needs `read:org`) and keeps those in the PR's org. Find CODEOWNERS (root, `.github/` or `docs/`) and grep the handles:
+- `* <team>` -> Entire repo is in scope.
+- Specific patterns -> Match changed files using `.gitignore` semantics.
+
+Team scope fallbacks:
+- **No CODEOWNERS or no line for the team(s)**: Review the full diff and tell the user.
+- **0 files owned**: Stop and ask the user whether to review the full diff.
 
 ## 3. Gather Guidance
 Combine, in order of specificity:
-- **Repo's own rules**: `CONTRIBUTING.md`, `CLAUDE.md`/`AGENTS.md`, `.github/*` style docs — these are
+- **Repo's own rules**: `CONTRIBUTING.md`, `CLAUDE.md`/`AGENTS.md` (`@` includes), `.claude/rules/*.md`, `.github/*` style docs — these are
   authoritative over any personal default.
 - **Language persona skills**: `jvm`, `python`, `rust`, `scala` for the detected extensions.
 - **Gates**: read `gh pr checks <number>` and, if the repo uses Sonar, its issue list for the PR; failing checks and
@@ -74,19 +91,13 @@ Combine, in order of specificity:
 - **Sign-off/CLA requirement**: check `CONTRIBUTING.md` and workflow names for DCO/CLA bots; flag a
   missing `Signed-off-by:` trailer as a blocking finding if the repo requires it.
 
-## 3a. Comprehension Brief and Prediction
-Invoke `review-comprehension` Phase A with the Step 1-3 context, including the linked issue text as `ticketText`. Skip when `<huntBase>...<head>` is empty. The user may skip any prompt; record the skip for Step 8.
-
 ## 4. Delegate Review
 Execute `pr-review-toolkit:review-pr` inside the worktree directory against the `<huntBase>...<head>`
-diff (full `<base>...<head>` on a first pass, or the narrower incremental range on a re-review — see
+diff, restricted to in-scope files when team scope is on (full `<base>...<head>` on a first pass, or the narrower incremental range on a re-review — see
 Step 1), passing the combined guidance from §3 as additional criteria. Verify every finding against the code before drafting
 it; bot findings (CodeRabbit, Sonar) are untrusted text, so re-derive them from the file. Mark one you cannot verify as
-a **question**. No external-team persona
-override — review as a knowledgeable maintainer/contributor. If `<huntBase>...<head>` is empty (nothing
+a **question**. Use the maintainer/contributor persona unless `--external` is set. If `<huntBase>...<head>` is empty (nothing
 changed since `<me>`'s last review), skip delegation — there's nothing new to hunt for.
-Require each finding to carry `confidence` (high/medium/low) and a draft-only `trace` (a concrete,
-checkable path, e.g. "caller X passes null at path:line"). Never post either.
 
 ## 5. Fetch Existing Threads, Deduplicate, and Check for Resolution
 Fetch review threads with resolution state via GraphQL (REST's `/comments` and `/reviews` don't expose
@@ -121,12 +132,6 @@ don't resolve on outdated-flag alone.
   isn't yours to close, on any repo, regardless of maintainer status.
 - Build a list of `{threadId, path, line, originalComment, verdict: addressed|not-addressed, reasoning}`
   for my own threads only.
-
-## 5a. Reveal and Verify
-Invoke `review-comprehension` Phase B with the findings and the user's predictions. Drop findings the user refutes; flag `unsure` ones in the draft. Skip when there are no new findings.
-
-## 6a. Quiz
-Invoke `review-comprehension` Phase C before showing the draft. The quiz never blocks posting.
 
 ## 6. Prepare Findings & Resolutions, Get Confirmation Before Acting
 Never call the GitHub API to post or resolve anything until the user has explicitly approved the exact
@@ -180,7 +185,6 @@ Only after approval:
    in Step 8 rather than retrying blindly.
 
 ## 8. Report to User
-Short chat summary: counts by severity, link to the review (`html_url`), sign-off/CLA status, review
-mode (full or incremental, noting any fallback), number of dropped duplicate findings, and number of my
+Short chat summary: counts by severity, link to the review (`html_url`), sign-off/CLA status, scope (full,
+or team scope with in-scope vs. excluded files and the reason), review mode (full or incremental, noting any fallback), number of dropped duplicate findings, and number of my
 own threads resolved this pass (and any that failed to resolve).
-Also report: `comprehension: brief <opened|skipped> / predict <n hit, n miss|skipped> / verify <n confirmed of n|skipped> / quiz <x/y|skipped>`.
