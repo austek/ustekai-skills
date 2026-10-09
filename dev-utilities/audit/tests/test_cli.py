@@ -318,3 +318,23 @@ def test_plan_excludes_both_audit_and_auditr_dirs_from_git(repo):
     (root / ".auditor" / ".status.json").write_text("{}")
     status = subprocess.run(["git", "-C", str(root), "status", "--porcelain"], capture_output=True, text=True)
     assert ".audit" not in status.stdout
+
+
+def test_resume_applies_an_explicitly_changed_budget(repo):
+    root, git = repo
+    populate(root, git)
+    run(root, "plan", "--budget", "1M", "--small-repo-bytes", "1")
+    run(root, "record", "--unit", "hot", "--status", "done", "--spent", "10")
+    run(root, "plan", "--budget", "5M", "--small-repo-bytes", "1", "--resume", "--new-window")
+    st = json.loads((root / ".audit" / "state.json").read_text())
+    assert st["budget"] == {"unit": "tokens", "amount": 5_000_000}
+    assert st["spent"] == 0 and st["units"]["hot"] == "done"
+
+
+def test_resume_without_budget_keeps_the_stored_budget(repo):
+    root, git = repo
+    populate(root, git)
+    run(root, "plan", "--budget", "1M", "--small-repo-bytes", "1")
+    run(root, "plan", "--small-repo-bytes", "1", "--resume", "--new-window")
+    st = json.loads((root / ".audit" / "state.json").read_text())
+    assert st["budget"]["amount"] == 1_000_000

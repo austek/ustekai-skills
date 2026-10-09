@@ -151,11 +151,20 @@ def _new_plan_state(root: Path, a, units: list[dict], resolved: dict) -> dict:
     }
 
 
+def _with_requested_budget(existing: dict, a) -> dict:
+    if not a.budget:
+        return existing
+    config = load_config()
+    resolved = budget.resolve_budget(a.budget, _account(a), config)
+    return {**existing, "budget": resolved, "unit_per_token": _unit_per_token(resolved, config)}
+
+
 def _resume_existing(root: Path, a) -> bool:
     existing = state.load(state_path(root))
     if not (a.resume and existing and state.pending(existing)):
         return False
-    kept = {**existing, "spent": 0} if a.new_window else existing
+    current = _with_requested_budget(existing, a)
+    kept = {**current, "spent": 0} if a.new_window else current
     state.atomic_write(state_path(root), kept)
     print(json.dumps({"resumed": True, "spent": kept["spent"], "pending": len(state.pending(kept))}))
     return True
