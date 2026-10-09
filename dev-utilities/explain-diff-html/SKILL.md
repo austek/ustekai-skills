@@ -5,6 +5,8 @@ description: Use when the user asks for a rich explanation of a code change, dif
 
 # Explain Diff
 
+> Adapted from the original explain-diff skill by Dan Hoizner.
+
 Make a rich, interactive explanation of the specified code change as one self-contained HTML page.
 
 By default the page has six sections: Background, Intuition, Code walkthrough, Critic review,
