@@ -26,7 +26,7 @@ resolve_path() {
 resolve_name() {
   [[ -d "$root" ]] || { echo "root not found: $root" >&2; exit 1; }
   local repos exact fuzzy
-  mapfile -t repos < <(find "$root" -maxdepth 3 -name .git -prune -printf '%h\n' | sort)
+  mapfile -t repos < <(find -H "$root" -maxdepth 3 -name .git -prune -printf '%h\n' | sort)
   exact=(); fuzzy=()
   for r in "${repos[@]}"; do
     local base="${r##*/}"
@@ -37,7 +37,7 @@ resolve_name() {
   (( ${#matches[@]} )) || matches=("${fuzzy[@]}")
   case ${#matches[@]} in
     0) echo "no git repo matches '$target' under $root" >&2; exit 1 ;;
-    1) echo "${matches[0]}" ;;
+    1) realpath "${matches[0]}" ;;
     *) echo "ambiguous '$target':" >&2; printf '  %s\n' "${matches[@]}" >&2; exit 2 ;;
   esac
 }
@@ -62,4 +62,4 @@ else
 fi
 
 echo "repo:   $path"
-echo "attach: tmux attach -t $session"
+printf 'attach: tmux attach -t %q\n' "$session"
