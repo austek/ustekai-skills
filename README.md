@@ -21,7 +21,8 @@ Then enable whichever plugins you want:
   questionnaire generation.
 - `dev-utilities` — misc skills: IDE MCP tool selection, comment
   cleanup, code-claim verification, business analysis, HTML diff explanations,
-  starting remote Claude sessions in tmux.
+  starting remote Claude sessions in tmux, budgeted sharded repo audits
+  (`/audit`, `/full-audit`).
 
 ## Update
 
