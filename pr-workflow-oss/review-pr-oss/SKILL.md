@@ -5,6 +5,7 @@ description: >-
   owned by a team (`--team`) or by your own teams (`--my-teams`) in CODEOWNERS. Detects languages, applies
   the repo's own CONTRIBUTING.md/CLAUDE.md/.claude/rules rules + language persona skills, checks DCO/CLA
   sign-off, and delegates to pr-review-toolkit:review-pr. Use for "review this PR" or "review PR #N".
+argument-hint: "[PR number|URL|branch] [--team @org/team] [--my-teams] [--external] (all optional; defaults to the current branch's PR, full diff)"
 ---
 
 # Reviewing a PR

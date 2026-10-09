@@ -5,6 +5,7 @@ description: >-
   fetch reviewer feedback (inline threads + review verdicts), draft fixes, push after confirmation,
   reply to and resolve the threads that fix actually addresses, re-checking for docs drift each
   loop. Use for "check my PR", "is my PR green", "address the review comments", or "land this PR".
+argument-hint: "[PR number|URL] (optional; defaults to the current branch's PR)"
 ---
 
 # Landing Your Own PR on a Personal/OSS Repo
