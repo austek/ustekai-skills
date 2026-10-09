@@ -4,6 +4,7 @@
 --template tolerates {{PLACEHOLDER}} markers.
 """
 import re
+from collections import Counter
 import shutil
 import subprocess
 import sys
@@ -40,6 +41,10 @@ def strip_comments(html):
     return re.sub(r"<!--.*?-->", "", html, flags=re.S)
 
 
+def without_pre(html):
+    return re.sub(r"<pre\b.*?</pre>", "", html, flags=re.S)
+
+
 def check_structure(html):
     p = Structure()
     p.feed(strip_comments(html))
@@ -52,13 +57,17 @@ def check_scripts(html):
     if not node:
         return ["node not found: script syntax not checked"]
     errors = []
-    for i, body in enumerate(re.findall(r"<script[^>]*>(.*?)</script>", html, re.S)):
+    bodies = re.findall(r"<script[^>]*>(.*?)</script>", html, re.S)
+    if 'class="quiz-q"' in html and not any("querySelectorAll('.quiz-q')" in b for b in bodies):
+        errors.append("quiz questions present but the quiz script is missing")
+    for i, body in enumerate(bodies):
         with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
             f.write(body)
         r = subprocess.run([node, "--check", f.name], capture_output=True, text=True)
         Path(f.name).unlink()
         if r.returncode:
-            errors.append(f"script block {i + 1} fails node --check: {" | ".join(r.stderr.strip().splitlines()[:4])}")
+            detail = " | ".join(r.stderr.strip().splitlines()[:4])
+            errors.append(f"script block {i + 1} fails node --check: {detail}")
     return errors
 
 
@@ -67,8 +76,14 @@ def check_sidebar(html):
     errors = []
     if '<nav id="sidebar"' not in html:
         return ["missing <nav id=\"sidebar\">"]
-    nav = html[html.index('<nav id="sidebar"'):html.index("</nav>")]
-    ids = set(re.findall(r'\sid="([^"]+)"', html))
+    start = html.index('<nav id="sidebar"')
+    end = html.find("</nav>", start)
+    if end < 0:
+        return ["sidebar <nav> is never closed"]
+    nav = html[start:end]
+    all_ids = re.findall(r'\sid="([^"]+)"', html)
+    ids = set(all_ids)
+    errors += [f"duplicate id: {i}" for i, n in sorted(Counter(all_ids).items()) if n > 1]
     missing = set(re.findall(r'href="#([^"]+)"', nav)) - ids
     if missing:
         errors.append(f"sidebar links with no matching id: {sorted(missing)}")
@@ -100,9 +115,16 @@ def check_sidebar(html):
 
 def check_hygiene(html, allow_placeholders):
     errors = []
-    if not allow_placeholders and re.search(r"\{\{|\}\}", html):
-        errors.append(f"unfilled placeholders: {sorted(set(re.findall(r'[{][{][A-Z_]+[}][}]', html)))}")
-    if re.search(r'href=""|href="#"', html):
+    prose = without_pre(html)
+    unfilled = sorted(set(re.findall(r"[{][{][A-Z_]+[}][}]", html)))
+    if not allow_placeholders and unfilled:
+        errors.append(f"unfilled placeholders: {unfilled}")
+    for block in re.findall(r"<pre\b[^>]*>(.*?)</pre>", html, re.S):
+        raw = re.sub(r"</?(?:code|span)\b[^>]*>", "", block)
+        if re.search(r"<[A-Za-z!/]", raw):
+            errors.append("unescaped HTML inside <pre>: html.escape code and captured output")
+            break
+    if re.search(r'href=""|href="#"', prose):
         errors.append('placeholder links: href="" or href="#"')
     key = re.search(r"explain-diff-read-sections:([^']*)'", html)
     if not key or not key.group(1).strip():

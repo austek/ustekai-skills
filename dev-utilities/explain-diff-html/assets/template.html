@@ -64,6 +64,7 @@ th { background: #efe9db; }
 .opt.correct { border-color: var(--green); background: var(--green-soft); }
 .opt.wrong { border-color: var(--red); background: var(--red-soft); }
 .quiz-q.answered .opt { cursor: default; }
+.quiz-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
 .page-main { min-width: 0; }
 @media (min-width: 1150px) { .page-main { margin-left: 250px; } }
@@ -77,7 +78,7 @@ th { background: #efe9db; }
   .sidebar { transform: translateX(-100%); box-shadow: 2px 0 16px rgba(0,0,0,0.18); }
   .sidebar.open { transform: translateX(0); }
 }
-.sidebar-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #8a8371; margin-bottom: 0.9rem; }
+.sidebar-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.9rem; }
 .sidebar-nav { list-style: none; margin: 0; padding: 0; }
 .sidebar-item { margin-bottom: 0.15rem; }
 .sidebar-item a { display: flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.6rem; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 0.87rem; border-left: 3px solid transparent; line-height: 1.3; }
@@ -85,7 +86,7 @@ th { background: #efe9db; }
 .sidebar-item.active > a { background: white; border-left-color: var(--accent); font-weight: 700; }
 .sidebar-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid #b8b0a0; flex-shrink: 0; }
 .sidebar-item.is-read .sidebar-dot { background: var(--green); border-color: var(--green); }
-.sidebar-item.is-read > a { color: #8a8371; }
+.sidebar-item.is-read > a { color: var(--muted); }
 .sidebar-item.is-read > a::after { content: '\2713'; margin-left: auto; color: var(--green); font-weight: 700; font-size: 0.8rem; }
 .sidebar-subnav { list-style: none; margin: 0.1rem 0 0.4rem 0; padding: 0; max-height: 0; overflow: hidden; transition: max-height 0.2s ease; }
 .sidebar-item.active > .sidebar-subnav { max-height: 20em; }
@@ -94,7 +95,7 @@ th { background: #efe9db; }
 .sidebar-subitem.active > a { color: var(--ink); font-weight: 700; border-left-color: var(--blue); background: white; }
 .sidebar-subitem .sidebar-dot { width: 7px; height: 7px; border-width: 1.5px; }
 .sidebar-subitem.is-read .sidebar-dot { background: var(--green); border-color: var(--green); }
-.sidebar-subitem.is-read > a { color: #a39c8c; }
+.sidebar-subitem.is-read > a { color: var(--muted); }
 .sidebar-subitem.is-read > a::after { content: '\2713'; margin-left: auto; color: var(--green); font-weight: 700; font-size: 0.7rem; }
 .sidebar-footer { margin-top: 1.3rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .sidebar-reset { width: 100%; font-size: 0.78rem; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--line); background: white; cursor: pointer; color: var(--muted); font-family: inherit; }
@@ -110,7 +111,7 @@ th { background: #efe9db; }
 .subsection-header .mark-read-btn { font-size: 0.72rem; padding: 0.28rem 0.7rem; }
 .page-section.is-read > .section-header .mark-read-btn, .subsection.is-read > .subsection-header .mark-read-btn { background: var(--green-soft); border-color: var(--green); color: var(--green); }
 .page-section.is-collapsed > .section-body, .subsection.is-collapsed > .subsection-body { display: none; }
-.page-section.is-collapsed > .section-header h2, .subsection.is-collapsed > .subsection-header h3 { color: #a39c8c; }
+.page-section.is-collapsed > .section-header h2, .subsection.is-collapsed > .subsection-header h3 { color: var(--muted); }
 .section-header { position: sticky; top: 0; z-index: 6; background: var(--paper); padding: 0.9rem 0 0.6rem; }
 /* JS sets --sec-header-h to the section header height; 60px is the pre-JS fallback. */
 .subsection-header { position: sticky; top: var(--sec-header-h, 60px); z-index: 5; background: var(--paper); padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
@@ -118,7 +119,7 @@ th { background: #efe9db; }
 </style>
 </head>
 <body>
-<button id="sidebarToggle" class="sidebar-toggle-btn" type="button" aria-label="Toggle sections menu">&#9776; Sections</button>
+<button id="sidebarToggle" class="sidebar-toggle-btn" type="button" aria-label="Toggle sections menu" aria-controls="sidebar" aria-expanded="false">&#9776; Sections</button>
 <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
 <nav id="sidebar" class="sidebar">
   <div class="sidebar-title">Contents</div>
@@ -198,6 +199,7 @@ th { background: #efe9db; }
   <div class="section-header"><h2 id="quiz">6. Quiz</h2><button class="mark-read-btn" data-section="quiz">Mark as read</button></div>
   <div class="section-body">
     <div class="quiz-q"><p class="q">1. {{QUESTION}}</p>
+      <div class="quiz-status" role="status" aria-live="polite"></div>
       <button class="opt" type="button" data-correct="true">{{OPTION}}<span class="fb">{{WHY_CORRECT}}</span></button>
       <button class="opt" type="button" data-correct="false">{{OPTION}}<span class="fb">{{WHY_WRONG}}</span></button>
     </div>
@@ -215,6 +217,8 @@ th { background: #efe9db; }
       opt.addEventListener('click', function () {
         if (qz.classList.contains('answered')) return;
         qz.classList.add('answered');
+        var status = qz.querySelector('.quiz-status');
+        if (status) status.textContent = (opt.dataset.correct === 'true' ? 'Correct. ' : 'Incorrect. ') + opt.querySelector('.fb').textContent;
         qz.querySelectorAll('.opt').forEach(function (o) {
           var ok = o.dataset.correct === 'true';
           if (ok) o.classList.add('correct', 'shown');
@@ -242,13 +246,19 @@ th { background: #efe9db; }
   function elFor(kind, id) { return kind === 'section' ? secEl(id) : subEl(id); }
   function buttonFor(el, kind) { return el.querySelector(':scope > .' + kind + '-header .mark-read-btn'); }
 
+  function refreshLabel(el) {
+    var kind = el.classList.contains('subsection') ? 'subsection' : 'section';
+    var btn = buttonFor(el, kind);
+    if (!btn) return;
+    btn.textContent = el.classList.contains('is-collapsed') ? 'Show section'
+      : el.classList.contains('is-read') ? 'Mark as unread' : 'Mark as read';
+  }
   // Unlike applyRead, leaves .is-collapsed untouched.
   function applyReadOnly(kind, id, isRead) {
     var el = elFor(kind, id);
     if (!el) return;
     el.classList.toggle('is-read', isRead);
-    var btn = buttonFor(el, kind);
-    if (btn) btn.textContent = isRead ? 'Show section' : 'Mark as read';
+    refreshLabel(el);
     var li = navItem(kind, id);
     if (li) li.classList.toggle('is-read', isRead);
     if (isRead) read.add(kind + ':' + id); else read.delete(kind + ':' + id);
@@ -256,7 +266,7 @@ th { background: #efe9db; }
   function applyRead(kind, id, isRead) {
     applyReadOnly(kind, id, isRead);
     var el = elFor(kind, id);
-    if (el) el.classList.toggle('is-collapsed', isRead);
+    if (el) { el.classList.toggle('is-collapsed', isRead); refreshLabel(el); }
   }
 
   function nextHeader(el, kind) {
@@ -356,8 +366,25 @@ th { background: #efe9db; }
 
   var sidebar = document.getElementById('sidebar');
   var backdrop = document.getElementById('sidebarBackdrop');
-  function setOpen(open) { sidebar.classList.toggle('open', open); backdrop.classList.toggle('open', open); }
-  document.getElementById('sidebarToggle').addEventListener('click', function () { setOpen(!sidebar.classList.contains('open')); });
+  var toggleBtn = document.getElementById('sidebarToggle');
+  var mobileMq = window.matchMedia('(max-width: 1149px)');
+  function syncSidebar() {
+    var open = sidebar.classList.contains('open');
+    sidebar.toggleAttribute('inert', mobileMq.matches && !open);
+    toggleBtn.setAttribute('aria-expanded', String(open));
+  }
+  function setOpen(open) {
+    var wasOpen = sidebar.classList.contains('open');
+    sidebar.classList.toggle('open', open);
+    backdrop.classList.toggle('open', open);
+    syncSidebar();
+    if (open) sidebar.querySelector('a').focus();
+    else if (wasOpen) toggleBtn.focus();
+  }
+  toggleBtn.addEventListener('click', function () { setOpen(!sidebar.classList.contains('open')); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && sidebar.classList.contains('open')) setOpen(false); });
+  mobileMq.addEventListener('change', syncSidebar);
+  syncSidebar();
   backdrop.addEventListener('click', function () { setOpen(false); });
 
   sidebar.querySelectorAll('a[href^="#"]').forEach(function (a) {
@@ -366,19 +393,19 @@ th { background: #efe9db; }
       if (!target) return;
       e.preventDefault();
       var sec = target.closest('.page-section'), sub = target.closest('.subsection');
-      if (sec) sec.classList.remove('is-collapsed');
-      if (sub) sub.classList.remove('is-collapsed');
+      if (sec) { sec.classList.remove('is-collapsed'); refreshLabel(sec); }
+      if (sub) { sub.classList.remove('is-collapsed'); refreshLabel(sub); }
       (sub || sec || target).scrollIntoView();
       setOpen(false);
     });
   });
 
   document.getElementById('resetProgress').addEventListener('click', function () {
+    document.querySelectorAll('.is-collapsed').forEach(function (el) { el.classList.remove('is-collapsed'); });
     Array.from(read).forEach(function (k) {
       var kind = k.split(':')[0], id = k.slice(kind.length + 1);
       applyReadOnly(kind, id, false);
     });
-    document.querySelectorAll('.is-collapsed').forEach(function (el) { el.classList.remove('is-collapsed'); });
     read.clear();
     save();
   });

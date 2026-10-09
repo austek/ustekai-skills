@@ -14,7 +14,7 @@ deliverable. Skip them only when the user explicitly opts out ("just explain it"
 
 ## Workflow
 
-1. **Get the change.** Resolve the target to a commit SHA and a diff.
+1. **Get the change.** Resolve the target to a commit SHA and a diff, then create the detached worktree at that SHA (see "Tests that prove the findings"). The critic and the proof-tests both use it, so neither depends on what the user's tree has checked out.
    - PR: `gh pr view`, `gh pr diff`. Check `git log` and `git branch -vv` first, since the working tree may already sit on the commit you need.
    - Branch: diff against its merge base with the default branch.
    - Uncommitted work: `git diff HEAD`, and note that the page describes unpublished changes.
@@ -47,7 +47,7 @@ When given more than one PR, explain the **combined result**, not each PR in iso
 Add a **Critic review** section to the page, not just a chat report.
 
 - **Run the critic as a fresh, read-only subagent** (Agent tool). A critic handed your conclusions tends to confirm them. Give it the repo path, the commit SHA, how to get the diff, and the output format below. Do not give it your findings, your intuition summary, or the PR description's claims. Tell it not to modify or commit anything.
-- Review the **combined, current state** of the code (whatever is actually checked out) and say so to the critic.
+- Point the critic at the worktree path for the resolved SHA and at the matching diff, and tell it to review the combined state there. Never rely on whatever is checked out in the user's tree: it may be a different revision from the requested PR.
 - Ask for concrete findings with `file:line`, a failure scenario per finding, a severity (Blocker/Major/Medium/Low), and an overall verdict. If the change's context matters (POC vs. production), ask for a verdict appropriate to it.
 - Verify each cited `file:line` against the real file yourself before it goes on the page.
 - Render a verdict box, then finding cards grouped by severity, then a callout on what the review checked and ruled out. A one-sided list of problems reads as less credible.
@@ -65,7 +65,7 @@ git worktree add --detach "${TMPDIR:-/tmp}/explain-diff-<slug>" <reviewed-sha>
 ```
 
 - For an unmerged PR, fetch its head first (`git fetch origin pull/<n>/head`) and use that SHA.
-- For uncommitted work, apply it in the worktree with `git diff HEAD | git -C <worktree> apply`.
+- For uncommitted work, apply the diff with `git diff HEAD | git -C <worktree> apply`, then copy the untracked files, which the diff omits: `git ls-files -z --others --exclude-standard | xargs -0 cp --parents -t <worktree>`.
 - If the worktree cannot build (it needs untracked local setup), tell the user and ask before writing into their tree.
 - **Never commit** in the worktree or anywhere else. Never push.
 - **Ask before cleanup.** At the end, list the test files and the worktree path, and ask whether to keep the worktree or run `git worktree remove`. Never remove it unprompted. The page states the path and which files the author can copy into their PR.
@@ -92,6 +92,7 @@ Every citation of a specific external item is a real `<a href>` to the exact ite
 - **PRs and issues**: `https://github.com/<owner>/<repo>/pull/<n>` or `/issues/<n>`. Use real URLs from the source material, including PRs in other repos.
 - **Jira**: `https://<instance>.atlassian.net/browse/<KEY>`. Take the host from links already in the repo or PR content. Never guess it.
 - **Confluence**: link only a URL you were given or found. Never invent one; ask.
+- **Uncommitted work has no commit to link.** A commit link shows the file before the edit, and a new untracked file has no URL at all. Quote an excerpt in a `<pre>` for unpublished lines, and keep commit-pinned links for committed content.
 - **Do not link** diagram box labels or literal code inside `<pre>`.
 - The validator rejects `href="#"` and `href=""`.
 
@@ -103,6 +104,7 @@ Copy `assets/template.html` and fill it in. The CSS, sidebar, scrollspy, mark-as
 - **Sections** are `<section class="page-section" id="sec-X" data-section="X">`, with a `.section-header` holding `<h2 id="X">` and a button, and a `.section-body`. Optional `<h3>` subsections follow the same pattern one level down (`subsec-X`, `data-subsection`). Every `<h2>` and `<h3>` carries its own bare `id`. The sidebar links resolve against it, not against the `sec-` wrapper id.
 - **Sidebar**: one `<li class="sidebar-item">` per section, in page order, with a `.sidebar-dot` span. Add, remove, or renumber sections and sidebar items together, and keep the `<h2>` numbers sequential.
 - **Optional sections**: delete the Critic and Proof-tests sections and their sidebar items together on an opt-out.
+- **HTML-escape every code excerpt and captured output** (`html.escape`) before it goes inside `<pre><code>`. Raw test code or output such as `List<String>` breaks the layout, and `</code></pre><script>` executes when the page is opened. The validator flags raw tags inside `<pre>`.
 - Use the template's classes for callouts, `.pill`, `.badge`, `.card`, `.verdict`, and the `.diagram`/`.flow`/`.box` family. Do not add a separate table of contents.
 
 ## Format
