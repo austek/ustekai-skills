@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+:root {
+  --paper: #faf7ef; --ink: #222018; --muted: #6b6559; --line: #ddd6c4;
+  --accent: #b4532a; --blue: #2c5d9e; --green: #2f7d4f; --green-soft: #e3f1e8;
+  --red: #b3261e; --red-soft: #fbe9e7; --amber: #b7791f; --amber-soft: #fdf3dc;
+  --yellow: #c9a227; --note-soft: #eef3fa;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 1.05rem/1.65 Georgia, 'Times New Roman', serif; }
+.wrap { max-width: 820px; margin: 0 auto; padding: 2rem 1.2rem 5rem; }
+h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 0.3rem; }
+h2 { font-size: 1.5rem; margin: 0; }
+h3 { font-size: 1.15rem; margin: 0; }
+.subtitle { color: var(--muted); margin: 0 0 2rem; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.95rem; }
+a { color: var(--blue); }
+code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.88em; background: #efe9db; padding: 0.1em 0.3em; border-radius: 4px; }
+pre { white-space: pre; overflow-x: auto; background: #1e1d1a; color: #f0ece0; padding: 0.9rem 1rem; border-radius: 8px; font: 0.85rem/1.5 ui-monospace, Menlo, Consolas, monospace; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.9rem; }
+th, td { border: 1px solid var(--line); padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+th { background: #efe9db; }
+.sans { font-family: 'Helvetica Neue', Arial, sans-serif; }
+.callout { border-left: 4px solid var(--blue); background: var(--note-soft); padding: 0.7rem 1rem; margin: 1.2rem 0; border-radius: 0 8px 8px 0; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.95rem; }
+.callout.warn { border-left-color: var(--amber); background: var(--amber-soft); }
+.callout.good { border-left-color: var(--green); background: var(--green-soft); }
+.skippable { color: var(--muted); font-style: italic; font-size: 0.9rem; }
+.pill { display: inline-block; font: 700 0.72rem 'Helvetica Neue', Arial, sans-serif; padding: 0.15rem 0.6rem; border-radius: 999px; color: white; background: var(--muted); vertical-align: middle; }
+.pill.pr1 { background: var(--blue); }
+.pill.pr2 { background: var(--accent); }
+.pill.pr3 { background: var(--green); }
+.badge { display: inline-block; font: 700 0.72rem 'Helvetica Neue', Arial, sans-serif; padding: 0.15rem 0.6rem; border-radius: 4px; color: white; }
+.badge.sev-blocker, .badge.res-fail { background: var(--red); }
+.badge.sev-major { background: var(--accent); }
+.badge.sev-medium { background: var(--amber); }
+.badge.sev-low { background: var(--muted); }
+.badge.res-pass { background: var(--green); }
+.card { border: 1px solid var(--line); border-left: 5px solid var(--muted); background: white; border-radius: 8px; padding: 0.8rem 1rem; margin: 1rem 0; }
+.card.sev-blocker, .card.res-fail { border-left-color: var(--red); }
+.card.sev-major { border-left-color: var(--accent); }
+.card.sev-medium { border-left-color: var(--amber); }
+.card.sev-low { border-left-color: var(--muted); }
+.card.res-pass { border-left-color: var(--green); }
+.card h4 { margin: 0 0 0.4rem; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 1rem; }
+.verdict { border: 2px solid var(--ink); border-radius: 10px; padding: 0.9rem 1.1rem; margin: 1rem 0; font-family: 'Helvetica Neue', Arial, sans-serif; }
+.diagram { margin: 1.2rem 0; padding: 1rem; background: white; border: 1px solid var(--line); border-radius: 10px; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.88rem; }
+.flow { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.box { border: 2px solid var(--ink); border-radius: 8px; padding: 0.4rem 0.7rem; background: #fffdf7; }
+.box.new { border-color: var(--green); background: var(--green-soft); }
+.box.old { border-color: var(--red); background: var(--red-soft); }
+.arrow::before { content: '\2192'; font-size: 1.2rem; }
+.quiz-q { margin: 1.4rem 0; }
+.quiz-q .q { font-weight: 700; }
+.opt { display: block; width: 100%; text-align: left; font: inherit; font-size: 0.95rem; padding: 0.55rem 0.8rem; margin: 0.4rem 0; border: 1px solid var(--line); border-radius: 8px; background: white; cursor: pointer; }
+.opt:hover { background: #efe9db; }
+.opt .fb { display: none; margin-top: 0.4rem; font-size: 0.88rem; color: var(--muted); }
+.opt.shown .fb { display: block; }
+.opt.correct { border-color: var(--green); background: var(--green-soft); }
+.opt.wrong { border-color: var(--red); background: var(--red-soft); }
+.quiz-q.answered .opt { cursor: default; }
+
+.page-main { min-width: 0; }
+@media (min-width: 1150px) { .page-main { margin-left: 250px; } }
+.sidebar {
+  position: fixed; top: 0; left: 0; width: 250px; height: 100vh; overflow-y: auto;
+  background: #f2eee3; border-right: 1px solid var(--line); padding: 1.6rem 1.1rem;
+  font-family: 'Helvetica Neue', Arial, sans-serif; z-index: 110;
+  transition: transform 0.25s ease;
+}
+@media (max-width: 1149px) {
+  .sidebar { transform: translateX(-100%); box-shadow: 2px 0 16px rgba(0,0,0,0.18); }
+  .sidebar.open { transform: translateX(0); }
+}
+.sidebar-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #8a8371; margin-bottom: 0.9rem; }
+.sidebar-nav { list-style: none; margin: 0; padding: 0; }
+.sidebar-item { margin-bottom: 0.15rem; }
+.sidebar-item a { display: flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.6rem; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 0.87rem; border-left: 3px solid transparent; line-height: 1.3; }
+.sidebar-item a:hover { background: #e8e2d3; }
+.sidebar-item.active > a { background: white; border-left-color: var(--accent); font-weight: 700; }
+.sidebar-dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid #b8b0a0; flex-shrink: 0; }
+.sidebar-item.is-read .sidebar-dot { background: var(--green); border-color: var(--green); }
+.sidebar-item.is-read > a { color: #8a8371; }
+.sidebar-item.is-read > a::after { content: '\2713'; margin-left: auto; color: var(--green); font-weight: 700; font-size: 0.8rem; }
+.sidebar-subnav { list-style: none; margin: 0.1rem 0 0.4rem 0; padding: 0; max-height: 0; overflow: hidden; transition: max-height 0.2s ease; }
+.sidebar-item.active > .sidebar-subnav { max-height: 20em; }
+.sidebar-subitem a { display: flex; align-items: center; gap: 0.5rem; padding: 0.32rem 0.6rem 0.32rem 1.1rem; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: 0.79rem; border-left: 2px solid transparent; line-height: 1.3; }
+.sidebar-subitem a:hover { background: #e8e2d3; color: var(--ink); }
+.sidebar-subitem.active > a { color: var(--ink); font-weight: 700; border-left-color: var(--blue); background: white; }
+.sidebar-subitem .sidebar-dot { width: 7px; height: 7px; border-width: 1.5px; }
+.sidebar-subitem.is-read .sidebar-dot { background: var(--green); border-color: var(--green); }
+.sidebar-subitem.is-read > a { color: #a39c8c; }
+.sidebar-subitem.is-read > a::after { content: '\2713'; margin-left: auto; color: var(--green); font-weight: 700; font-size: 0.7rem; }
+.sidebar-footer { margin-top: 1.3rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.sidebar-reset { width: 100%; font-size: 0.78rem; padding: 0.45rem; border-radius: 6px; border: 1px solid var(--line); background: white; cursor: pointer; color: var(--muted); font-family: inherit; }
+.sidebar-reset:hover { background: #efe9db; }
+.sidebar-toggle-btn { position: fixed; top: 1rem; left: 1rem; z-index: 111; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.85rem; padding: 0.55rem 0.95rem; border-radius: 8px; border: 1px solid var(--line); background: white; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: none; }
+@media (max-width: 1149px) { .sidebar-toggle-btn { display: block; } .wrap { padding-top: 4rem; } }
+.sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(20,18,14,0.35); z-index: 105; }
+.sidebar-backdrop.open { display: block; }
+.section-header, .subsection-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.section-header h2, .subsection-header h3 { flex: 1 1 auto; margin-top: 0; margin-bottom: 0; }
+.mark-read-btn { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.76rem; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 999px; border: 1px solid var(--line); background: white; cursor: pointer; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.mark-read-btn:hover { background: #efe9db; }
+.subsection-header .mark-read-btn { font-size: 0.72rem; padding: 0.28rem 0.7rem; }
+.page-section.is-read > .section-header .mark-read-btn, .subsection.is-read > .subsection-header .mark-read-btn { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.page-section.is-collapsed > .section-body, .subsection.is-collapsed > .subsection-body { display: none; }
+.page-section.is-collapsed > .section-header h2, .subsection.is-collapsed > .subsection-header h3 { color: #a39c8c; }
+.section-header { position: sticky; top: 0; z-index: 6; background: var(--paper); padding: 0.9rem 0 0.6rem; }
+/* JS sets --sec-header-h to the section header height; 60px is the pre-JS fallback. */
+.subsection-header { position: sticky; top: var(--sec-header-h, 60px); z-index: 5; background: var(--paper); padding: 0.5rem 0; border-bottom: 1px solid var(--line); }
+.subsection { margin-bottom: 1.5rem; }
+</style>
+</head>
+<body>
+<button id="sidebarToggle" class="sidebar-toggle-btn" type="button" aria-label="Toggle sections menu">&#9776; Sections</button>
+<div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+<nav id="sidebar" class="sidebar">
+  <div class="sidebar-title">Contents</div>
+  <ul class="sidebar-nav">
+    <!-- Items must match the <section>s and <h3>s; validate.py checks them. -->
+    <li class="sidebar-item" data-section="background"><a href="#background"><span class="sidebar-dot"></span>Background</a>
+      <ul class="sidebar-subnav">
+        <li class="sidebar-subitem" data-subsection="background-broad"><a href="#background-broad"><span class="sidebar-dot"></span>The broad picture</a></li>
+        <li class="sidebar-subitem" data-subsection="background-narrow"><a href="#background-narrow"><span class="sidebar-dot"></span>What this change touches</a></li>
+      </ul>
+    </li>
+    <li class="sidebar-item" data-section="intuition"><a href="#intuition"><span class="sidebar-dot"></span>Intuition</a></li>
+    <li class="sidebar-item" data-section="code"><a href="#code"><span class="sidebar-dot"></span>Code walkthrough</a></li>
+    <li class="sidebar-item" data-section="critic"><a href="#critic"><span class="sidebar-dot"></span>Critic review</a></li>
+    <li class="sidebar-item" data-section="proof-tests"><a href="#proof-tests"><span class="sidebar-dot"></span>Tests that prove the findings</a></li>
+    <li class="sidebar-item" data-section="quiz"><a href="#quiz"><span class="sidebar-dot"></span>Quiz</a></li>
+  </ul>
+  <div class="sidebar-footer"><button id="resetProgress" class="sidebar-reset" type="button">Reset read progress</button></div>
+</nav>
+
+<div class="page-main">
+<div class="wrap">
+<h1>{{TITLE}}</h1>
+<p class="subtitle">{{SUBTITLE_WITH_LINKS}}</p>
+
+<section class="page-section" id="sec-background" data-section="background">
+  <div class="section-header"><h2 id="background">1. Background</h2><button class="mark-read-btn" data-section="background">Mark as read</button></div>
+  <div class="section-body">
+    <div class="subsection" id="subsec-background-broad" data-subsection="background-broad">
+      <div class="subsection-header"><h3 id="background-broad">The broad picture</h3><button class="mark-read-btn subsection-mark-read-btn" data-subsection="background-broad">Mark as read</button></div>
+      <div class="subsection-body">
+        <p class="skippable">Skip this if you already know the system.</p>
+        {{BROAD_BACKGROUND}}
+      </div>
+    </div>
+    <div class="subsection" id="subsec-background-narrow" data-subsection="background-narrow">
+      <div class="subsection-header"><h3 id="background-narrow">What this change touches</h3><button class="mark-read-btn subsection-mark-read-btn" data-subsection="background-narrow">Mark as read</button></div>
+      <div class="subsection-body">{{NARROW_BACKGROUND}}</div>
+    </div>
+  </div>
+</section>
+
+<section class="page-section" id="sec-intuition" data-section="intuition">
+  <div class="section-header"><h2 id="intuition">2. Intuition</h2><button class="mark-read-btn" data-section="intuition">Mark as read</button></div>
+  <div class="section-body">
+    {{INTUITION}}
+    <div class="diagram"><div class="flow"><span class="box old">before: {{EXAMPLE_DATA}}</span><span class="arrow"></span><span class="box new">after: {{EXAMPLE_DATA}}</span></div></div>
+  </div>
+</section>
+
+<section class="page-section" id="sec-code" data-section="code">
+  <div class="section-header"><h2 id="code">3. Code walkthrough</h2><button class="mark-read-btn" data-section="code">Mark as read</button></div>
+  <div class="section-body">{{CODE_WALKTHROUGH}}</div>
+</section>
+
+<section class="page-section" id="sec-critic" data-section="critic">
+  <div class="section-header"><h2 id="critic">4. Critic review</h2><button class="mark-read-btn" data-section="critic">Mark as read</button></div>
+  <div class="section-body">
+    <div class="verdict"><strong>Verdict:</strong> {{CRITIC_VERDICT}}</div>
+    <div class="card sev-major"><h4><span class="badge sev-major">Major</span> {{FINDING_TITLE}}</h4><p>{{FINDING_BODY_WITH_FILE_LINE_LINKS}}</p></div>
+    <div class="callout good"><strong>Checked and ruled out:</strong> {{RULED_OUT}}</div>
+  </div>
+</section>
+
+<section class="page-section" id="sec-proof-tests" data-section="proof-tests">
+  <div class="section-header"><h2 id="proof-tests">5. Tests that prove the findings</h2><button class="mark-read-btn" data-section="proof-tests">Mark as read</button></div>
+  <div class="section-body">
+    <p class="sans">Test files live in <code>{{WORKTREE_PATH}}</code>. Nothing is committed.</p>
+    <table><tr><th>Finding</th><th>Layer</th><th>Test</th><th>Result</th></tr>
+      <tr><td>{{FINDING}}</td><td>{{LAYER}}</td><td><code>{{TEST_NAME}}</code></td><td><span class="badge res-fail">FAIL</span></td></tr></table>
+    <div class="card res-fail"><h4><span class="badge res-fail">FAIL</span> {{TEST_NAME}}</h4><pre><code>{{TEST_CODE}}</code></pre><pre><code>{{REAL_CAPTURED_OUTPUT}}</code></pre></div>
+    <div class="callout warn"><strong>What these tests do not prove:</strong> {{LIMITS}}</div>
+  </div>
+</section>
+
+<section class="page-section" id="sec-quiz" data-section="quiz">
+  <div class="section-header"><h2 id="quiz">6. Quiz</h2><button class="mark-read-btn" data-section="quiz">Mark as read</button></div>
+  <div class="section-body">
+    <div class="quiz-q"><p class="q">1. {{QUESTION}}</p>
+      <button class="opt" type="button" data-correct="true">{{OPTION}}<span class="fb">{{WHY_CORRECT}}</span></button>
+      <button class="opt" type="button" data-correct="false">{{OPTION}}<span class="fb">{{WHY_WRONG}}</span></button>
+    </div>
+  </div>
+</section>
+
+<p class="sans" style="color:var(--muted);font-size:0.85rem;margin-top:3rem">{{FOOTER_WITH_COMMIT_SHA_AND_LINKS}}</p>
+</div>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('.quiz-q').forEach(function (qz) {
+    qz.querySelectorAll('.opt').forEach(function (opt) {
+      opt.addEventListener('click', function () {
+        if (qz.classList.contains('answered')) return;
+        qz.classList.add('answered');
+        qz.querySelectorAll('.opt').forEach(function (o) {
+          var ok = o.dataset.correct === 'true';
+          if (ok) o.classList.add('correct', 'shown');
+          if (o === opt) { o.classList.add('shown'); if (!ok) o.classList.add('wrong'); }
+        });
+      });
+    });
+  });
+})();
+</script>
+<script>
+(function () {
+  var KEY = 'explain-diff-read-sections:{{SLUG}}';
+  var read = new Set();
+  try { JSON.parse(localStorage.getItem(KEY) || '[]').forEach(function (k) { read.add(k); }); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(Array.from(read))); } catch (e) {} }
+
+  var sections = [].slice.call(document.querySelectorAll('.page-section'));
+  function secEl(id) { return document.getElementById('sec-' + id); }
+  function subEl(id) { return document.getElementById('subsec-' + id); }
+  function subsOf(sec) { return [].slice.call(sec.querySelectorAll('.subsection')); }
+  function navItem(kind, id) {
+    return document.querySelector('.sidebar-' + (kind === 'section' ? 'item' : 'subitem') + '[data-' + kind + '="' + id + '"]');
+  }
+  function elFor(kind, id) { return kind === 'section' ? secEl(id) : subEl(id); }
+  function buttonFor(el, kind) { return el.querySelector(':scope > .' + kind + '-header .mark-read-btn'); }
+
+  // Unlike applyRead, leaves .is-collapsed untouched.
+  function applyReadOnly(kind, id, isRead) {
+    var el = elFor(kind, id);
+    if (!el) return;
+    el.classList.toggle('is-read', isRead);
+    var btn = buttonFor(el, kind);
+    if (btn) btn.textContent = isRead ? 'Show section' : 'Mark as read';
+    var li = navItem(kind, id);
+    if (li) li.classList.toggle('is-read', isRead);
+    if (isRead) read.add(kind + ':' + id); else read.delete(kind + ':' + id);
+  }
+  function applyRead(kind, id, isRead) {
+    applyReadOnly(kind, id, isRead);
+    var el = elFor(kind, id);
+    if (el) el.classList.toggle('is-collapsed', isRead);
+  }
+
+  function nextHeader(el, kind) {
+    var next = el.nextElementSibling;
+    while (next && !next.matches(kind === 'subsection' ? '.subsection' : '.page-section')) next = next.nextElementSibling;
+    if (!next && kind === 'subsection') {
+      next = el.closest('.page-section').nextElementSibling;
+      while (next && !next.matches('.page-section')) next = next.nextElementSibling;
+    }
+    var target = next || el;
+    var tKind = target.matches('.subsection') ? 'subsection' : 'section';
+    return target.querySelector(':scope > .' + tKind + '-header');
+  }
+  // Neutralise sticky before measuring: a stuck header reports its clamped rect, not its natural one.
+  function scrollToHeader(header) {
+    if (!header) return;
+    var prev = header.style.position;
+    header.style.position = 'static';
+    var natural = header.getBoundingClientRect().top + window.scrollY;
+    header.style.position = prev;
+    var offset = parseFloat(getComputedStyle(header).top) || 0;
+    window.scrollTo(0, Math.max(0, natural - offset));
+  }
+
+  function setSubsection(id, isRead, direct) {
+    var el = subEl(id);
+    if (!el) return;
+    if (direct) applyRead('subsection', id, isRead); else applyReadOnly('subsection', id, isRead);
+    var sec = el.closest('.page-section');
+    var secId = sec.dataset.section;
+    var subs = subsOf(sec);
+    var allRead = subs.length > 0 && subs.every(function (s) { return s.classList.contains('is-read'); });
+    if (allRead && !sec.classList.contains('is-read')) applyReadOnly('section', secId, true);
+    if (!allRead && sec.classList.contains('is-read')) applyReadOnly('section', secId, false);
+    save();
+    if (direct && isRead) scrollToHeader(nextHeader(el, 'subsection'));
+  }
+  function setSection(id, isRead) {
+    var el = secEl(id);
+    if (!el) return;
+    applyRead('section', id, isRead);
+    subsOf(el).forEach(function (s) { applyRead('subsection', s.dataset.subsection, isRead); });
+    save();
+    if (isRead) scrollToHeader(nextHeader(el, 'section'));
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.mark-read-btn');
+    if (!btn) return;
+    if (btn.dataset.subsection) {
+      var s = subEl(btn.dataset.subsection);
+      setSubsection(btn.dataset.subsection, !s.classList.contains('is-read'), true);
+    } else if (btn.dataset.section) {
+      var p = secEl(btn.dataset.section);
+      setSection(btn.dataset.section, !p.classList.contains('is-read'));
+    }
+  });
+
+  function restore() {
+    var saved = Array.from(read);
+    read.clear();
+    saved.forEach(function (k) {
+      var kind = k.split(':')[0], id = k.slice(kind.length + 1);
+      applyRead(kind, id, true);
+    });
+  }
+
+  function syncHeaderHeights() {
+    sections.forEach(function (s) {
+      var h = s.querySelector(':scope > .section-header');
+      if (h) s.style.setProperty('--sec-header-h', h.offsetHeight + 'px');
+    });
+  }
+
+  // Keep a persistent ratio map: an IntersectionObserver batch only lists targets that crossed a
+  // threshold, so choosing "best" from the batch alone leaves the highlight stale.
+  function spy(targets, keyOf, itemFor) {
+    if (!('IntersectionObserver' in window) || !targets.length) return;
+    var ratios = {};
+    var thresholds = [];
+    for (var i = 0; i <= 100; i++) thresholds.push(i / 100);
+    targets.forEach(function (t) { ratios[keyOf(t)] = 0; });
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { ratios[keyOf(en.target)] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var best = null, bestRatio = 0;
+      Object.keys(ratios).forEach(function (k) { if (ratios[k] > bestRatio) { bestRatio = ratios[k]; best = k; } });
+      if (best === null) return;
+      Object.keys(ratios).forEach(function (k) {
+        var li = itemFor(k);
+        if (li) li.classList.toggle('active', k === best);
+      });
+    }, { rootMargin: '-10% 0px -70% 0px', threshold: thresholds });
+    targets.forEach(function (t) { io.observe(t); });
+  }
+  spy(sections, function (t) { return t.dataset.section; }, function (k) { return navItem('section', k); });
+  spy([].slice.call(document.querySelectorAll('h3[id]')), function (t) { return t.id; }, function (k) { return navItem('subsection', k); });
+
+  var sidebar = document.getElementById('sidebar');
+  var backdrop = document.getElementById('sidebarBackdrop');
+  function setOpen(open) { sidebar.classList.toggle('open', open); backdrop.classList.toggle('open', open); }
+  document.getElementById('sidebarToggle').addEventListener('click', function () { setOpen(!sidebar.classList.contains('open')); });
+  backdrop.addEventListener('click', function () { setOpen(false); });
+
+  sidebar.querySelectorAll('a[href^="#"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      var target = document.getElementById(a.getAttribute('href').slice(1));
+      if (!target) return;
+      e.preventDefault();
+      var sec = target.closest('.page-section'), sub = target.closest('.subsection');
+      if (sec) sec.classList.remove('is-collapsed');
+      if (sub) sub.classList.remove('is-collapsed');
+      (sub || sec || target).scrollIntoView();
+      setOpen(false);
+    });
+  });
+
+  document.getElementById('resetProgress').addEventListener('click', function () {
+    Array.from(read).forEach(function (k) {
+      var kind = k.split(':')[0], id = k.slice(kind.length + 1);
+      applyReadOnly(kind, id, false);
+    });
+    document.querySelectorAll('.is-collapsed').forEach(function (el) { el.classList.remove('is-collapsed'); });
+    read.clear();
+    save();
+  });
+
+  restore();
+  syncHeaderHeights();
+  window.addEventListener('resize', syncHeaderHeights);
+})();
+</script>
+</body>
+</html>
