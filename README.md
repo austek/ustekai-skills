@@ -46,6 +46,8 @@ Some skills in `architecture` and `productivity` are adapted from
 [mattpocock/skills](https://github.com/mattpocock/skills) (MIT) — see
 `THIRD-PARTY-LICENSES.md`.
 
+`dev-utilities/explain-diff-html` is adapted from the original skill by Dan Hoizner.
+
 Note: `analysis`, `pr`, and `story` commands (in `dev-utilities`) read voice
 and style rules from your own project's `CLAUDE.md`. Without one, they fall
 back to sensible defaults.
