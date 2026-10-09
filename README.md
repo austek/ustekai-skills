@@ -20,7 +20,7 @@ Then enable whichever plugins you want:
 - `productivity` — plan-sharpening interviews, agent handoffs, and
   questionnaire generation.
 - `dev-utilities` — misc skills: IDE MCP tool selection, comment
-  cleanup, code-claim verification, business analysis.
+  cleanup, code-claim verification, business analysis, HTML diff explanations.
 
 ## Update
 
