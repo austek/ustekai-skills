@@ -49,7 +49,8 @@ else
 fi
 
 name="${path##*/}"
-session="claude-${name//[.:]/_}"
+hash="$(printf %s "$path" | sha1sum | cut -c1-6)"
+session="claude-${name//[.:]/_}-$hash"
 
 if tmux has-session -t "$session" 2>/dev/null; then
   echo "reusing session $session"

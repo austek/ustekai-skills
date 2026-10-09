@@ -18,7 +18,7 @@ Outcomes:
 - Exit 2 (ambiguous): show the candidate paths and ask which one, then rerun with the full path.
 - Exit 1 (no match): list repos with `find <root> -maxdepth 3 -name .git -prune -printf '%h\n'` and ask which was meant.
 
-The command is idempotent: an existing `claude-<repo>` tmux session is reused, not duplicated.
-Stop a session with `tmux kill-session -t claude-<repo>`.
+The command is idempotent: an existing `claude-<repo>-<path-hash>` tmux session (the hash is the first 6 hex of the SHA-1 of the resolved path, so same-named repos get separate sessions) is reused, not duplicated.
+Stop a session with `tmux kill-session -t <session>` (name printed by the script; `tmux ls` lists them).
 Never start the session inside the current terminal; the tmux session must stay detached.
 Requires `tmux`.
