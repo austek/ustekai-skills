@@ -62,7 +62,7 @@ accept_trust() {
 }
 
 sd_quote() {
-  local s="${1//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//%/%%}"; s="${s//\$/\$\$}"
+  local s="${1//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//%/%%}"
   printf '"%s"' "$s"
 }
 
@@ -81,8 +81,8 @@ install_boot() {
     printf '[Unit]\nDescription=Claude remote-control session %s\nAfter=network-online.target\n\n' "$name"
     printf '[Service]\nType=oneshot\nRemainAfterExit=yes\nKillMode=process\n'
     printf 'Environment=%s\nEnvironment=%s\n' "$(sd_quote "PATH=$PATH")" "$(sd_quote "CLAUDE_REMOTE_SETTINGS=$settings")"
-    printf 'ExecStart=%s' "$(sd_quote "$bin")"
-    for a in "${exec_args[@]}"; do printf ' %s' "$(sd_quote "$a")"; done
+    printf 'ExecStart=%s' "$(sd_quote "${bin//\$/\$\$}")"
+    for a in "${exec_args[@]}"; do printf ' %s' "$(sd_quote "${a//\$/\$\$}")"; done
     printf '\n\n[Install]\nWantedBy=default.target\n'
   } > "$unit"
   # Without linger the user manager, and this unit, only start at login.
@@ -107,6 +107,9 @@ else
 fi
 
 name="${rc_name:-${path##*/}}"
+[[ "$name$path" != *$'\n'* && "$name$path" != *$'\r'* ]] || { echo "name or path contains a line break" >&2; exit 64; }
+[[ -z "$rc_name" || "$rc_name" == "${rc_name//[^A-Za-z0-9_-]/_}" ]] \
+  || { echo "--name may only contain letters, digits, '_' and '-'" >&2; exit 64; }
 hash="$(printf %s "$path" | sha1sum | cut -c1-6)"
 session="claude-${name//[^A-Za-z0-9_-]/_}-$hash"
 
