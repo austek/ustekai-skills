@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
-# Usage: claude-remote [--root DIR] <repo-name | /full/path>
+# Usage: claude-remote [--root DIR] [--name NAME] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>
 set -euo pipefail
 
 root="${CLAUDE_REMOTE_ROOT:-$HOME/Workspace}"
 settings="${CLAUDE_REMOTE_SETTINGS:-$HOME/.config/dotfiles/claude-profiles/claude_personal.json}"
-target=""
+target=""; rc_name=""; trust=0; boot=""
 
 while (( $# )); do
   case "$1" in
     --root) root="${2:?--root needs a directory}"; shift 2 ;;
+    --name) rc_name="${2:?--name needs a value}"; shift 2 ;;
+    --trust) trust=1; shift ;;
+    --install-boot) boot=install; shift ;;
+    --uninstall-boot) boot=uninstall; shift ;;
     -h|--help) sed -n '2p' "$0" | cut -c3-; exit 0 ;;
     *) target="$1"; shift ;;
   esac
 done
-[[ -n "$target" ]] || { echo "usage: claude-remote [--root DIR] <repo-name | /full/path>" >&2; exit 64; }
+[[ -n "$target" ]] || { echo "usage: claude-remote [--root DIR] [--name NAME] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>" >&2; exit 64; }
 
 root="${root/#\~/$HOME}"
 target="${target/#\~/$HOME}"
@@ -42,15 +46,77 @@ resolve_name() {
   esac
 }
 
+# Matches literal Claude Code TUI text ("trust this folder", "❯ Yes"); update if the wording changes.
+accept_trust() {
+  local i pane
+  for ((i = 0; i < 20; i++)); do
+    pane="$(tmux capture-pane -t "$session" -p 2>/dev/null || true)"
+    if [[ "$pane" == *"trust this folder"* ]]; then
+      if [[ "$pane" == *"❯ Yes"* ]]; then tmux send-keys -t "$session" Enter
+      else tmux send-keys -t "$session" Down Enter; fi
+      return 0
+    fi
+    [[ "$pane" == *"remote-control is active"* ]] && return 0
+    sleep 1
+  done
+}
+
+sd_quote() {
+  local s="${1//\\/\\\\}"; s="${s//\"/\\\"}"; s="${s//%/%%}"
+  printf '"%s"' "$s"
+}
+
+unit_path() { echo "$HOME/.config/systemd/user/claude-remote-${session#claude-}.service"; }
+
+install_boot() {
+  local unit exec_args=(--name "$name") bin="$HOME/.local/share/claude-remote/claude-remote"
+  unit="$(unit_path)"
+  mkdir -p "${bin%/*}"
+  # The unit runs a copy outside the versioned plugin cache so plugin updates cannot break it.
+  install -m 755 "$(realpath "$0")" "$bin"
+  (( trust )) && exec_args+=(--trust)
+  exec_args+=("$path")
+  mkdir -p "${unit%/*}"
+  {
+    printf '[Unit]\nDescription=Claude remote-control session %s\nAfter=network-online.target\n\n' "$name"
+    printf '[Service]\nType=oneshot\nRemainAfterExit=yes\nKillMode=process\n'
+    printf 'Environment=%s\nEnvironment=%s\n' "$(sd_quote "PATH=$PATH")" "$(sd_quote "CLAUDE_REMOTE_SETTINGS=$settings")"
+    printf 'ExecStart=%s' "$(sd_quote "${bin//\$/\$\$}")"
+    for a in "${exec_args[@]}"; do printf ' %s' "$(sd_quote "${a//\$/\$\$}")"; done
+    printf '\n\n[Install]\nWantedBy=default.target\n'
+  } > "$unit"
+  # Without linger the user manager, and this unit, only start at login.
+  loginctl enable-linger "$USER"
+  systemctl --user daemon-reload
+  systemctl --user enable --now "${unit##*/}"
+  echo "installed ${unit##*/} (linger enabled)"
+}
+
+uninstall_boot() {
+  local unit; unit="$(unit_path)"
+  systemctl --user disable --now "${unit##*/}" 2>/dev/null || true
+  rm -f "$unit"
+  systemctl --user daemon-reload
+  echo "removed ${unit##*/}; tmux session $session left running"
+}
+
 if [[ "$target" == */* || "$target" == . || "$target" == .. ]]; then
   path="$(resolve_path)"
 else
   path="$(resolve_name)"
 fi
 
-name="${path##*/}"
+name="${rc_name:-${path##*/}}"
+[[ "$name$path" != *$'\n'* && "$name$path" != *$'\r'* ]] || { echo "name or path contains a line break" >&2; exit 64; }
+[[ -z "$rc_name" || "$rc_name" == "${rc_name//[^A-Za-z0-9_-]/_}" ]] \
+  || { echo "--name may only contain letters, digits, '_' and '-'" >&2; exit 64; }
 hash="$(printf %s "$path" | sha1sum | cut -c1-6)"
-session="claude-${name//[.:]/_}-$hash"
+session="claude-${name//[^A-Za-z0-9_-]/_}-$hash"
+
+case "$boot" in
+  install) install_boot; exit 0 ;;
+  uninstall) uninstall_boot; exit 0 ;;
+esac
 
 if tmux has-session -t "$session" 2>/dev/null; then
   echo "reusing session $session"
@@ -59,6 +125,7 @@ else
   [[ -f "$settings" ]] && args+=(--settings "$settings")
   tmux new-session -d -s "$session" -c "$path" "$(printf '%q ' "${args[@]}")"
   echo "started session $session"
+  (( trust )) && accept_trust
 fi
 
 echo "repo:   $path"
