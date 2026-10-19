@@ -84,7 +84,10 @@ Team scope fallbacks:
 Combine, in order of specificity:
 - **Repo's own rules**: `CONTRIBUTING.md`, `CLAUDE.md`/`AGENTS.md` (`@` includes), `.claude/rules/*.md`, `.github/*` style docs — these are
   authoritative over any personal default.
-- **Language persona skills**: `jvm`, `python`, `rust`, `scala` for the detected extensions.
+- **Language persona skills** (`language-personas` plugin; skip silently when it is not installed): for each language in
+  the diff (`.java` → `java`, `.py` → `python`, `.rs` → `rust`, `.scala`/`.sc` → `scala`), load
+  `language-personas:<lang>-coding-standards`. Also load `<lang>-testing` when test files changed, and `<lang>-tooling`
+  when build or lint files changed (`build.gradle*`, `pom.xml`, `pyproject.toml`, `Cargo.toml`, `build.sbt`).
 - **Gates**: read `gh pr checks <number>` and, if the repo uses Sonar, its issue list for the PR; failing checks and
   open gate issues are findings. Pull the log of every matrix leg reported as failed; ignore a cancelled leg only when its
   log shows another matrix leg's failure cancelled it (fail-fast); any other cancellation leaves the gate unverified,
