@@ -131,8 +131,9 @@ Paginate with `after` while `hasNextPage` is true.
 **Dedup new findings**: drop a draft finding that makes the same complaint about the same thing as any existing
 thread (from anyone), resolved or not. Line, category and wording drift across pushes and rebases, so judge the
 substance, not the anchor. A thread the author resolved by reply or by hand counts: read the whole thread, the last
-messages carry the decision, and don't re-raise what they accepted. Keep a finding about a different defect on the
-same line or in the same file. When torn, keep it.
+messages carry the decision, and don't re-raise what they accepted. A thread resolved because the code was fixed accepted
+nothing: keep a finding when the current diff reintroduces that defect. Keep a finding about a
+different defect on the same line or in the same file. When torn, keep it.
 
 **Check my own prior unresolved threads for resolution**: for each thread where `isResolved: false` and
 the first comment's `author.login == <me>`, read the current state of `path` around `line` in the
