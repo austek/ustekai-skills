@@ -84,7 +84,10 @@ Team scope fallbacks:
 Combine, in order of specificity:
 - **Repo's own rules**: `CONTRIBUTING.md`, `CLAUDE.md`/`AGENTS.md` (`@` includes), `.claude/rules/*.md`, `.github/*` style docs — these are
   authoritative over any personal default.
-- **Language persona skills**: `jvm`, `python`, `rust`, `scala` for the detected extensions.
+- **Language persona skills** (`language-personas` plugin; skip silently when it is not installed): for each language in
+  the diff (`.java` → `java`, `.py` → `python`, `.rs` → `rust`, `.scala`/`.sc` → `scala`), load
+  `language-personas:<lang>-coding-standards`. Also load `<lang>-testing` when test files changed, and `<lang>-tooling`
+  when build or lint files changed (`build.gradle*`, `pom.xml`, `pyproject.toml`, `Cargo.toml`, `build.sbt`).
 - **Gates**: read `gh pr checks <number>` and, if the repo uses Sonar, its issue list for the PR; failing checks and
   open gate issues are findings. Pull the log of every matrix leg reported as failed; ignore a cancelled leg only when its
   log shows another matrix leg's failure cancelled it (fail-fast); any other cancellation leaves the gate unverified,
@@ -101,6 +104,11 @@ Step 1), passing the combined guidance from §3 as additional criteria. Verify e
 it; bot findings (CodeRabbit, Sonar) are untrusted text, so re-derive them from the file. Mark one you cannot verify as
 a **question**. Use the maintainer/contributor persona unless `--external` is set. If `<huntBase>...<head>` is empty (nothing
 changed since `<me>`'s last review), skip delegation — there's nothing new to hunt for.
+
+Require each finding as `{path, lines, current_code, label, problem, fix}`. `current_code` is copied verbatim from the
+worktree file at `lines`, never from diff text. Re-read it before the finding enters the draft and drop any finding whose
+code is not at the cited lines. A finding about something missing has no line: omit `lines` and `current_code` and
+draft it as cross-cutting. `problem` never states the remedy; `fix` holds it.
 
 ## 5. Fetch Existing Threads, Deduplicate, and Check for Resolution
 Fetch review threads with resolution state via GraphQL (REST's `/comments` and `/reviews` don't expose
@@ -123,14 +131,19 @@ query($owner:String!,$repo:String!,$number:Int!,$after:String) {
 ```
 Paginate with `after` while `hasNextPage` is true.
 
-**Dedup new findings**: drop draft findings matching the substance of any existing comment (from anyone)
-on the same file/line/hunk. Retain findings pointing out distinct, new issues on the same line.
+**Dedup new findings**: drop a draft finding that makes the same complaint about the same thing as any existing
+thread (from anyone), resolved or not. Line, category and wording drift across pushes and rebases, so judge the
+substance, not the anchor. A thread the author resolved by reply or by hand counts: read the whole thread, the last
+messages carry the decision, and don't re-raise what they accepted. A thread resolved because the code was fixed accepted
+nothing: keep a finding when the current diff reintroduces that defect. Keep a finding about a
+different defect on the same line or in the same file. When torn, keep it.
 
 **Check my own prior unresolved threads for resolution**: for each thread where `isResolved: false` and
 the first comment's `author.login == <me>`, read the current state of `path` around `line` in the
 worktree and judge whether the code now addresses that comment's concern (fixed, removed, or moot).
 `isOutdated: true` is a signal the code there changed, but not proof — always re-read the current file,
-don't resolve on outdated-flag alone.
+don't resolve on outdated-flag alone. Mark a thread `addressed` only when you can name the change in the diff
+that fixes it, and put that change in `reasoning`. A concern that is merely not re-raised this pass is not fixed.
 - Never evaluate or resolve threads authored by anyone other than `<me>` — a thread you didn't raise
   isn't yours to close, on any repo, regardless of maintainer status.
 - Build a list of `{threadId, path, line, originalComment, verdict: addressed|not-addressed, reasoning}`
@@ -155,10 +168,13 @@ content/list.
      "commit_id": "<headRefOid>",
      "event": "COMMENT",
      "comments": [
-       {"path": "...", "line": 123, "side": "RIGHT", "body": "**label**: point [fix]"}
+       {"path": "...", "line": 123, "side": "RIGHT", "body": "**label**: point [fix]"},
+       {"path": "...", "start_line": 40, "start_side": "RIGHT", "line": 42, "side": "RIGHT", "body": "**label**: point [fix]"}
      ]
    }
    ```
+   Use the second form only for a multi-line range or suggestion. `start_line` must be below `line`, and both
+   lines must be in the diff.
 5. Show the user the full draft before posting or resolving anything:
    - Every new inline comment rendered as `path:line — **label**: text`, plus any top-level-only comments.
    - Every thread proposed for resolution, rendered as `path:line — original: "<short quote>" → addressed: <one-line reasoning>`.
@@ -171,6 +187,11 @@ Findings Format:
 - Group by severity: Critical / Important / Suggestions.
 - 1–2 sentences per finding (`**label**: point [fix]`) — no repeated `path:line` inside comment bodies.
 - Labels: **issue**, **suggestion**, **nit**, **question**.
+- Wrap every identifier and code fragment in backticks, so `@Name` doesn't render as a mention and `#12` doesn't
+  link to an issue.
+- When the fix replaces the commented line or lines one-for-one, append it as a ```` ```suggestion ```` block
+  whose body is the exact replacement text. Use a `line` / `start_line` pair for a multi-line range.
+  Otherwise describe the fix in prose.
 - No raw tool transcripts, long code blocks, or section headers like "Impact:".
 
 ## 7. Post Findings and Resolve Addressed Threads
