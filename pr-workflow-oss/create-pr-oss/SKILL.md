@@ -99,6 +99,15 @@ gh api repos/<owner>/<repo>/contents/.github/workflows --jq '.[].name' 2>/dev/nu
 If `CONTRIBUTING.md` requires sign-off, commit with `git commit -s` (adds `Signed-off-by:`) — check
 before the first commit, not after CI flags it.
 
+### Branch and commit identifiers
+The tracker id is the GitHub issue, never a Jira key. Find it before naming the branch: look in the user's
+request, then `gh issue list --repo <owner>/<repo> --search "<topic>"` against the upstream repo, not your fork.
+Confirm the match with the user before naming the branch. Never copy `NOJIRA` from history.
+- Branch: `<type>/<issue>_<snake_case_description>` (`feature/365_apple_xcframework`). No issue:
+  `<type>/NO_ISSUE_<description>`.
+- Commit subject: `<type>[(<scope>)]: <subject> (#<issue>)`, or end with `NO_ISSUE` when no issue exists.
+- A repo that documents its own scheme in `CONTRIBUTING.md` overrides this.
+
 ## 6. Mechanics That Bite
 - **Force Push**: Use `--force-with-lease=<ref>:<sha>` even on your own fork branch.
 - **Existing PRs**: Check `gh pr list --repo <owner>/<repo> --head "<you>:<branch>"` before creating.
