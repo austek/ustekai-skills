@@ -101,7 +101,8 @@ before the first commit, not after CI flags it.
 
 ### Branch and commit identifiers
 The tracker id is the GitHub issue, never a Jira key. Find it before naming the branch: look in the user's
-request, then `gh issue list --search "<topic>"`. Never copy `NOJIRA` from history.
+request, then `gh issue list --repo <owner>/<repo> --search "<topic>"` against the upstream repo, not your fork.
+Confirm the match with the user before naming the branch. Never copy `NOJIRA` from history.
 - Branch: `<type>/<issue>_<snake_case_description>` (`feature/365_apple_xcframework`). No issue:
   `<type>/NO_ISSUE_<description>`.
 - Commit subject: `<type>[(<scope>)]: <subject> (#<issue>)`, or end with `NO_ISSUE` when no issue exists.
