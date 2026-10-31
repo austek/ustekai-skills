@@ -85,9 +85,10 @@ One cycle:
 2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, with the mode's rules (§4). Require it to
    return after one CI pass or one push, without its §8 re-loop, so this skill counts the cycles and fix rounds.
    For a PR not authored by you and not covered by `--maintainer`, skip this step and only read failures and review
-   threads: find the failed run with `gh run list --repo <owner>/<repo> --branch <head> --json
-   databaseId,workflowName,conclusion`, then `gh run view <run-id> --repo <owner>/<repo> --log-failed`, plus the §3
-   GraphQL query of `land-pr-oss`.
+   threads: list the PR's failed checks with `gh pr checks <N> --repo <owner>/<repo> --json name,bucket,link`, take
+   the run ID from each failed check's `link` (`…/actions/runs/<run-id>/…`), then `gh run view <run-id> --repo
+   <owner>/<repo> --log-failed`, plus the §3 GraphQL query of `land-pr-oss`. Never select runs by branch name, which
+   other PRs can share.
 3. **Classify** the PR (§5). After a push, apply the bounded `mergeStateStatus` settling rule of `land-pr-oss` §1a
    first, since it reads `DIRTY` for a few seconds. A terminal state ends the PR's cycles; otherwise start the next
    cycle after the push, which re-triggers CI.
