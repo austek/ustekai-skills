@@ -48,9 +48,10 @@ Examples (print these for `help`):
 2. No target: `gh pr view --json number,url,headRepository,headRepositoryOwner,author,state`. Stop when the branch
    has no open PR.
 3. `owner/repo`:
-   `gh pr list --repo <owner>/<repo> --author <author> --state open --json number,title,author,isDraft,headRefName,isCrossRepository`.
+   `gh pr list --repo <owner>/<repo> --author <author> --state open --limit 200 --json number,title,author,isDraft,headRefName,isCrossRepository`.
 4. `owner`:
-   `gh search prs --owner <owner> --author <author> --state open --json number,repository,author,title,isDraft --limit 50`.
+   `gh search prs --owner <owner> --author <author> --state open --limit 200 --json number,repository,author,title,isDraft`.
+   A result that reaches the `--limit` may be truncated: say so in the list.
 5. `<author>` is `@me` by default and a login for `--author LOGIN`. For `--author all`, omit the `--author` flag.
    An explicit single-PR target ignores `--author`.
 6. Drop drafts unless `--include-drafts`.
@@ -62,15 +63,18 @@ applies to it. Label such rows `(not yours)` in the report. `--maintainer` lifts
 conditions in §4.
 
 More than one PR resolves: print the list (`owner/repo#N title`) and ask the user to confirm before the first
-cycle. Process PRs one at a time; each gets its own `--cycles` budget. Stop at 10 PRs and report the rest.
+cycle. Process PRs one at a time; each gets its own `--cycles` budget. Apply the 10-PR cap after the draft filter and
+report how many eligible PRs remain beyond it.
 
 ## 3. Cycle (per PR)
 
 Check before the first cycle:
-- `git status --porcelain` in the checkout shows no unrelated uncommitted changes; otherwise stop and ask.
-- Locate a local clone of `<owner>/<repo>` (current directory, then a search under the workspace); otherwise clone
-  to the scratchpad. Run `git fetch origin` and work on the PR head branch from `origin/<head>`, never a stale
-  local default branch.
+- Report-only PRs need no checkout: they use GitHub reads only.
+- For a PR the skill may modify, locate a local clone of `<owner>/<repo>` (current directory, then a search under
+  the workspace); otherwise clone to the scratchpad. Run `git fetch origin`, then `gh pr checkout <N> --repo
+  <owner>/<repo>`, which fetches the real head, including a fork's. Confirm the push destination (`git rev-parse
+  --abbrev-ref @{push}`) is the PR's head repository and branch. `git status --porcelain` must show no unrelated
+  uncommitted changes; otherwise stop and ask.
 - A PR from a fork you cannot push to (`isCrossRepository` and no push access) is report-only: no fixes.
 - One watcher per PR per session. Do not start a second watch on a PR this session already watches.
 
@@ -78,8 +82,9 @@ One cycle:
 1. **Wait for CI.** Run `gh pr checks <N> --repo <owner>/<repo> --watch` with `run_in_background`, then read its
    output when it finishes. No custom sleep or poll loops. No checks yet after the push settles: report that and
    stop.
-2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, with the mode's rules (§4). For a PR not
-   authored by you and not covered by `--maintainer`, skip this step and only read failing-check logs and review threads (`gh run view --log-failed`,
+2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, with the mode's rules (§4). Require it to return after one CI pass or one push, without its
+   §8 re-loop, so this skill counts the cycles and fix rounds. For a PR not authored by you and not covered by
+   `--maintainer`, skip this step and only read failing-check logs and review threads (`gh run view --log-failed`,
    the §3 GraphQL query of `land-pr-oss`).
 3. **Classify** the PR (§5). A terminal state ends the PR's cycles; otherwise start the next cycle after the push,
    which re-triggers CI.
