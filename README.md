@@ -14,7 +14,8 @@ Then enable whichever plugins you want:
 
 - `language-personas` — Java/Python/Rust/Scala coding-standards, testing, and
   tooling personas, plus a JVM systems mentor and a polyglot tutor.
-- `pr-workflow-oss` — open/review/land a PR on a personal or open-source repo.
+- `pr-workflow-oss` — open/review/land a PR on a personal or open-source repo,
+  and babysit your open PRs across a repo, user, or org (`/babysit-pr-oss`).
 - `architecture` — deep-module design, domain modeling, architecture
   improvement, spikes, design docs, and scaffolding a repo from a reference.
 - `productivity` — plan-sharpening interviews, agent handoffs, and
