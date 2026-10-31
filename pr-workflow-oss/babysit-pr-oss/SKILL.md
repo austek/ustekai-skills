@@ -80,14 +80,17 @@ Check before the first cycle:
 
 One cycle:
 1. **Wait for CI.** Run `gh pr checks <N> --repo <owner>/<repo> --watch` with `run_in_background`, then read its
-   output when it finishes. No custom sleep or poll loops. No checks yet after the push settles: report that and
-   stop.
-2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, with the mode's rules (§4). Require it to return after one CI pass or one push, without its
-   §8 re-loop, so this skill counts the cycles and fix rounds. For a PR not authored by you and not covered by
-   `--maintainer`, skip this step and only read failing-check logs and review threads (`gh run view --log-failed`,
-   the §3 GraphQL query of `land-pr-oss`).
-3. **Classify** the PR (§5). A terminal state ends the PR's cycles; otherwise start the next cycle after the push,
-   which re-triggers CI.
+   output when it finishes. No custom sleep or poll loops for the CI wait. No checks yet after the push settles:
+   report that and stop.
+2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, with the mode's rules (§4). Require it to
+   return after one CI pass or one push, without its §8 re-loop, so this skill counts the cycles and fix rounds.
+   For a PR not authored by you and not covered by `--maintainer`, skip this step and only read failures and review
+   threads: find the failed run with `gh run list --repo <owner>/<repo> --branch <head> --json
+   databaseId,workflowName,conclusion`, then `gh run view <run-id> --repo <owner>/<repo> --log-failed`, plus the §3
+   GraphQL query of `land-pr-oss`.
+3. **Classify** the PR (§5). After a push, apply the bounded `mergeStateStatus` settling rule of `land-pr-oss` §1a
+   first, since it reads `DIRTY` for a few seconds. A terminal state ends the PR's cycles; otherwise start the next
+   cycle after the push, which re-triggers CI.
 
 Consume a cycle only when CI ran to completion. A PR with green checks that is waiting on a reviewer is `WAITING`,
 not a reason to spend remaining cycles; report it and move on. For continuous coverage, the user pairs this with
