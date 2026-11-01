@@ -154,8 +154,8 @@ earlier commit proves nothing.
 | Source | Read with | Clear when |
 | --- | --- | --- |
 | Review threads | the `land-pr-oss` §3 GraphQL query, following `pageInfo` cursors for threads and for each thread's comments | zero threads with `isResolved` false, outdated ones included; a thread the fix addressed but the reviewer has not resolved is reported, not ignored |
-| Reviews | `gh api --paginate repos/<o>/<r>/pulls/<N>/reviews` | no review is `CHANGES_REQUESTED` and undismissed, whatever commit it targets: it blocks the merge until dismissed or superseded by that reviewer's later review; every review on the head SHA is read |
-| Review bots | the bot's reviews, then its PR comments (`gh api --paginate repos/<o>/<r>/issues/<N>/comments`) | each bot that reviews this repo (CodeRabbit) has a review on the head SHA, or a comment saying its review of the head finished; otherwise `WAITING`. A rate-limit notice is not a review |
+| Reviews | `gh api --paginate repos/<o>/<r>/pulls/<N>/reviews` | collapse the reviews per reviewer; none has a latest state of `CHANGES_REQUESTED`, whatever commit it targets. Only dismissal or that reviewer's later `APPROVED` review clears it; a later `COMMENTED` review does not. Every review on the head SHA is read |
+| Review bots | the bot's reviews, then its PR comments (`gh api --paginate repos/<o>/<r>/issues/<N>/comments`) | each configured review bot (CodeRabbit) has a review with `commit_id` equal to the head SHA, or a completion comment that names the head SHA (7 characters or more); a comment that names no SHA, or an older one, does not count. Otherwise `WAITING`. A rate-limit notice is not a review |
 | Inline comments | `gh api --paginate repos/<o>/<r>/pulls/<N>/comments` | every comment on the head SHA is read and fixed, or skipped with a reason |
 | Sonar | issues: `curl -s "https://sonarcloud.io/api/issues/search?componentKeys=<key>&pullRequest=<N>&resolved=false&ps=500"`; hotspots: `curl -s "https://sonarcloud.io/api/hotspots/search?projectKey=<key>&pullRequest=<N>&status=TO_REVIEW&ps=500"`; key from the check link's `id=` | both return zero (check `paging.total`, and fetch further pages when it exceeds the page size), whatever the quality gate says |
 | Code scanning | `gh api --paginate "repos/<o>/<r>/code-scanning/alerts?ref=refs/pull/<N>/merge&state=open"` | zero open alerts |
@@ -165,8 +165,9 @@ earlier commit proves nothing.
 with the failing source named, never zero findings.
 
 **Applicability.** A tool counts only when the repo uses it: a Sonar check in `gh pr checks` (or a
-`sonar-project.properties`), a CodeQL or other code-scanning workflow, a review bot that has ever commented on the
-repo. Record each unconfigured source as `N/A` in the report; it neither blocks nor clears the gate. A configured
+`sonar-project.properties`), a CodeQL or other code-scanning workflow, and a review bot only when it is configured now: its config file in the
+repo (`.coderabbit.yaml`), a check it owns in `gh pr checks`, or a review or comment from it on this PR. A bot that
+commented on an old PR does not count. Record each unconfigured source as `N/A` in the report; it neither blocks nor clears the gate. A configured
 tool whose check is `skipping`, `pending` or absent from `gh pr checks` is not a pass: name it and treat it as
 `WAITING`.
 
