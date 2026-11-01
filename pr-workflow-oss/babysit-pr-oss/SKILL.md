@@ -153,16 +153,25 @@ earlier commit proves nothing.
 
 | Source | Read with | Clear when |
 | --- | --- | --- |
-| Review threads | the `land-pr-oss` §3 GraphQL query | zero threads with `isResolved` false, outdated ones included; a thread the fix addressed but the reviewer has not resolved is reported, not ignored |
-| Reviews | `gh api repos/<o>/<r>/pulls/<N>/reviews` | every review whose `commit_id` is the head SHA is read; none is `CHANGES_REQUESTED`; each bot reviewer (CodeRabbit) has a review on the head SHA, else the PR is `WAITING` |
-| Inline comments | `gh api repos/<o>/<r>/pulls/<N>/comments` | every comment on the head SHA is read and fixed, or skipped with a reason |
-| Sonar | `curl -s "https://sonarcloud.io/api/issues/search?componentKeys=<key>&pullRequest=<N>&resolved=false"`, key from the check link's `id=` | zero issues and zero open hotspots, whatever the quality gate says |
-| Code scanning | `gh api "repos/<o>/<r>/code-scanning/alerts?ref=refs/pull/<N>/merge&state=open"` | zero open alerts |
+| Review threads | the `land-pr-oss` §3 GraphQL query, following `pageInfo` cursors for threads and for each thread's comments | zero threads with `isResolved` false, outdated ones included; a thread the fix addressed but the reviewer has not resolved is reported, not ignored |
+| Reviews | `gh api --paginate repos/<o>/<r>/pulls/<N>/reviews` | no review is `CHANGES_REQUESTED` and undismissed, whatever commit it targets: it blocks the merge until dismissed or superseded by that reviewer's later review; every review on the head SHA is read |
+| Review bots | the bot's reviews, then its PR comments (`gh api --paginate repos/<o>/<r>/issues/<N>/comments`) | each bot that reviews this repo (CodeRabbit) has a review on the head SHA, or a comment saying its review of the head finished; otherwise `WAITING`. A rate-limit notice is not a review |
+| Inline comments | `gh api --paginate repos/<o>/<r>/pulls/<N>/comments` | every comment on the head SHA is read and fixed, or skipped with a reason |
+| Sonar | issues: `curl -s "https://sonarcloud.io/api/issues/search?componentKeys=<key>&pullRequest=<N>&resolved=false&ps=500"`; hotspots: `curl -s "https://sonarcloud.io/api/hotspots/search?projectKey=<key>&pullRequest=<N>&status=TO_REVIEW&ps=500"`; key from the check link's `id=` | both return zero (check `paging.total`, and fetch further pages when it exceeds the page size), whatever the quality gate says |
+| Code scanning | `gh api --paginate "repos/<o>/<r>/code-scanning/alerts?ref=refs/pull/<N>/merge&state=open"` | zero open alerts |
 | Other tools | the link of each non-GitHub check | no finding the tool lists for the PR |
 
-A check reported as `skipping` or absent from `gh pr checks` is not a pass: say which check, and treat it as
-`WAITING`. Rate-limited review bots need the user's decision on a manual trigger. When the user asks to merge, run this
-gate first; if anything is open, report it and ask instead of merging.
+**Fail closed.** An API error, a rate limit, an unparsable response or a page that cannot be fetched is `WAITING`
+with the failing source named, never zero findings.
+
+**Applicability.** A tool counts only when the repo uses it: a Sonar check in `gh pr checks` (or a
+`sonar-project.properties`), a CodeQL or other code-scanning workflow, a review bot that has ever commented on the
+repo. Record each unconfigured source as `N/A` in the report; it neither blocks nor clears the gate. A configured
+tool whose check is `skipping`, `pending` or absent from `gh pr checks` is not a pass: name it and treat it as
+`WAITING`.
+
+Rate-limited review bots need the user's decision on a manual trigger. When the user asks to merge, run this gate
+first; if anything is open, report it and ask instead of merging.
 
 ## 6. Report
 
@@ -186,7 +195,8 @@ line or comment URL that shows it. Keep the report short; do not restate what `l
 - [ ] Mode A: nothing pushed, replied to or resolved without approval. Mode B: only failing-check fixes pushed, at
       most 3 rounds, non-force.
 - [ ] §5a gate read against the current head SHA before declaring `READY` or merging at the user's request: no
-      unresolved threads, every review and inline comment read, Sonar and code-scanning issues at zero, no
-      `skipping` or missing check.
+      unresolved threads, no undismissed `CHANGES_REQUESTED`, every review and inline comment read across all pages,
+      Sonar issues, Sonar hotspots and code-scanning alerts at zero, no `skipping` or missing check for a configured
+      tool, unconfigured tools recorded `N/A`, any failed read treated as `WAITING`.
 - [ ] No merge unless the user asks and the §5a gate is clear; no `--admin`, no branch deletion, no forge-setting changes.
 - [ ] No AI-attribution trailers or footers in commits, PR text or comments.
