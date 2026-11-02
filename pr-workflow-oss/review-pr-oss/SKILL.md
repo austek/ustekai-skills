@@ -153,20 +153,19 @@ messages carry the decision, and don't re-raise what they accepted. A thread res
 nothing: keep a finding when the current diff reintroduces that defect. Keep a finding about a
 different defect on the same line or in the same file. When torn, keep it.
 
-**Check my own prior unresolved threads for resolution**: for each thread where `isResolved: false` and
+**Check my own prior unresolved threads for fixes** (report only, never resolve): for each thread where `isResolved: false` and
 the first comment's `author.login == <me>`, read the current state of `path` around `line` in the
 worktree and judge whether the code now addresses that comment's concern (fixed, removed, or moot).
 `isOutdated: true` is a signal the code there changed, but not proof — always re-read the current file,
-don't resolve on outdated-flag alone. Mark a thread `addressed` only when you can name the change in the diff
+don't judge on the outdated flag alone. Mark a thread `addressed` only when you can name the change in the diff
 that fixes it, and put that change in `reasoning`. A concern that is merely not re-raised this pass is not fixed.
-- Never evaluate or resolve threads authored by anyone other than `<me>` — a thread you didn't raise
-  isn't yours to close, on any repo, regardless of maintainer status.
+- Never evaluate threads authored by anyone other than `<me>`, and never resolve any thread, on any repo,
+  regardless of maintainer status.
 - Build a list of `{threadId, path, line, originalComment, verdict: addressed|not-addressed, reasoning}`
   for my own threads only.
 
-## 6. Prepare Findings & Resolutions, Get Confirmation Before Acting
-Never call the GitHub API to post or resolve anything until the user has explicitly approved the exact
-content/list.
+## 6. Prepare Findings, Get Confirmation Before Acting
+Never call the GitHub API to post anything until the user has explicitly approved the exact content/list.
 
 1. Get the head commit SHA: `gh pr view <number> --json headRefOid -q .headRefOid`. Read it again right before
    posting; if it changed meanwhile (force-push or new commit), re-read the affected code and revalidate each finding
@@ -190,13 +189,12 @@ content/list.
    ```
    Use the second form only for a multi-line range or suggestion. `start_line` must be below `line`, and both
    lines must be in the diff.
-5. Show the user the full draft before posting or resolving anything:
+5. Show the user the full draft before posting anything:
    - Every new inline comment rendered as `path:line — **label**: text`, plus any top-level-only comments.
-   - Every thread proposed for resolution, rendered as `path:line — original: "<short quote>" → addressed: <one-line reasoning>`.
-   This is the actual content/action to be posted/resolved, not a paraphrase.
+   - Every own prior thread with its verdict, rendered as `path:line — original: "<short quote>" → addressed|not-addressed: <one-line reasoning>`.
+   This is the actual content to be posted, not a paraphrase.
 6. Stop and wait for approval. Anything other than a clear go-ahead is a revision request — edit and
-   re-show the draft. Approving new comments does not imply approving resolutions (and vice versa) — the
-   user can accept one list and reject the other.
+   re-show the draft.
 
 Findings Format:
 - Group by severity: Critical / Important / Suggestions.
@@ -209,21 +207,15 @@ Findings Format:
   Otherwise describe the fix in prose.
 - No raw tool transcripts, long code blocks, or section headers like "Impact:".
 
-## 7. Post Findings and Resolve Addressed Threads
+## 7. Post Findings
 Only after approval:
 1. Batch into one review call: `gh api repos/<owner>/<repo>/pulls/<number>/reviews --input review.json`.
    If the API rejects an empty `body` for `event: "COMMENT"`, drop the batch and post each inline
    finding individually via `gh api repos/<owner>/<repo>/pulls/<number>/comments` instead.
 2. Post any approved top-level-only findings via `gh pr comment`.
-3. Resolve each approved thread:
-   ```bash
-   gh api graphql -f query='mutation($threadId:ID!) { resolveReviewThread(input:{threadId:$threadId}) { thread { isResolved } } }' -f threadId=<id>
-   ```
-   Resolve one thread per call; don't batch resolutions into the same mutation as unrelated threads. If
-   a mutation fails (e.g. thread already resolved by someone else in the meantime), skip it and note it
-   in Step 8 rather than retrying blindly.
+Never resolve a thread. The author or maintainer closes their own threads.
 
 ## 8. Report to User
 Short chat summary: counts by severity, link to the review (`html_url`), sign-off/CLA status, scope (full,
 or team scope with in-scope vs. excluded files and the reason), review mode (full or incremental, noting any fallback), number of dropped duplicate findings, and number of my
-own threads resolved this pass (and any that failed to resolve). State which issues the PR was checked against and whether each requirement is met, partly met or missing.
+own earlier threads judged `addressed`, plus each `not-addressed` one with its original comment and reasoning. State which issues the PR was checked against and whether each requirement is met, partly met or missing.

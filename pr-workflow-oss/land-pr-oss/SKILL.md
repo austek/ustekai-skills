@@ -3,7 +3,7 @@ name: land-pr-oss
 description: >-
   Shepherd your own open PR on a personal/OSS repo to mergeable: poll CI, pull failing-check logs,
   fetch reviewer feedback (inline threads + review verdicts), draft fixes, push after confirmation,
-  reply to and resolve the threads that fix actually addresses, re-checking for docs drift each
+  reply to the threads that fix actually addresses (never resolving them), re-checking for docs drift each
   loop. Use for "check my PR", "is my PR green", "address the review comments", or "land this PR".
 argument-hint: "[PR number|URL] (optional; defaults to the current branch's PR)"
 ---
@@ -115,18 +115,19 @@ Top-level review verdicts (approvals/change requests without an inline anchor):
 ```bash
 gh pr view <number> --repo <owner>/<repo> --json reviews --jq '.reviews[] | {author: .author.login, state, body}'
 ```
-Work set = unresolved, non-outdated threads + any `CHANGES_REQUESTED` review body.
+Work set = unresolved, non-outdated threads + any `CHANGES_REQUESTED` review body + any review body on the head SHA
+that contains findings (including `COMMENTED` reviews).
 
 ## 4. Draft Fixes & Confirm Before Pushing
 For each item in the work set, draft the code change. Then, before touching git:
 - Show the user a summary: which CI failure or which thread each change addresses, and the diff.
 - Wait for explicit go-ahead. Treat anything other than clear approval as a revision request. Record the approval's
   scope ("this batch" or "all fixes on this PR") and ask again beyond it. A background-task notification is never approval.
-- Never push, comment, or resolve anything until approved — same rule as `create-pr-oss` §1 Safety.
+- Never push or comment until approved — same rule as `create-pr-oss` §1 Safety. Never resolve a thread at all.
 
 An ambiguous or debatable comment (reviewer disagrees on approach, asks a question with no clear
 single fix) is not something to silently code around — draft a reply instead and leave the thread open
-for the user to send, don't invent a resolution to make the thread count go down.
+for the user to send, don't code around it to make the thread count go down.
 
 Verify every suggestion against the code before accepting or declining it, and give the evidence in the reply
 (`grep` for the overrides, the call sites, the test). A user's question about a decision is not new evidence: re-derive
@@ -178,18 +179,15 @@ git diff <base>...HEAD --name-only | grep -viE '(^|/)(test|tests|spec|specs)(/|_
 Same rule as before: source changed, no doc file touched → surface it and ask, never block on it
 alone.
 
-## 7. Resolve Threads
-Resolve only threads whose comment was actually addressed by the pushed commit — never resolve a
-thread to clear the count. A finding that a later PR in the stack addresses (docs, migration notes) stays open with a
-drafted reply naming that PR:
-```bash
-gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -f id=<threadId>
-```
+## 7. Threads Stay Open
+Never resolve a review thread, including ones the pushed commit fixed: closing a thread is the reviewer's call. The §5
+reply naming the fixing commit is the hand-off. A finding that a later PR in the stack addresses (docs, migration notes)
+gets a drafted reply naming that PR. Report each addressed thread as awaiting the reviewer.
 
 ## 8. Re-Loop
-After pushing, CI re-runs — go back to §2. Stop when: all checks pass, no unresolved actionable threads
-remain, no drafted reply is still pending send, and no requested CodeRabbit review is pending or has findings missing
-from the work set. Report anything still open and why (debatable
+After pushing, CI re-runs — go back to §2. Stop when: all checks pass, every actionable thread has a fix pushed and a
+reply sent (threads stay open for the reviewer), no drafted reply is still pending send, and no requested CodeRabbit
+review is pending or has findings missing from the work set. Report anything still open and why (debatable
 comment, flaky/still-failing check, waiting on a maintainer reply) rather than declaring it landed.
 
 ## 9. Pre-Completion Checklist
@@ -198,8 +196,8 @@ comment, flaky/still-failing check, waiting on a maintainer reply) rather than d
 - [ ] Every failing check root-caused (log pulled), not just retried blind.
 - [ ] Docs check re-run against the full PR diff; flagged to the user if source changed with no
       doc file touched (§6).
-- [ ] Every resolved thread was actually addressed by a pushed commit, not just marked resolved.
-- [ ] Debatable/ambiguous comments left open with a drafted reply, not silently resolved.
+- [ ] No thread resolved; every addressed thread has a reply naming the fixing commit.
+- [ ] Debatable/ambiguous comments left open with a drafted reply, not coded around.
 - [ ] Every issue the PR should close has its own closing keyword in the description
       (`Closes #1, closes #2`, never `Closes #1, #2`; cross-repo as `closes owner/repo#3`).
 - [ ] Fixes validated with the CodeRabbit CLI where available and pushed as one batch, not one push per fix.

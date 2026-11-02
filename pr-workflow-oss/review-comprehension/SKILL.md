@@ -24,7 +24,7 @@ The host skill provides a 12-field context record:
 | `ticketText` | Linked Jira ticket or GitHub issue text |
 | `mode` | `full` or `incremental` |
 
-**Skipping:** The user may type `skip` at any prompt to skip a phase. Skips are recorded in the output but never penalized. No phase blocks posting or resolving.
+**Skipping:** The user may type `skip` at any prompt to skip a phase. Skips are recorded in the output but never penalized. No phase blocks posting.
 
 **Area Definition:** An `area` is the module directory: the nearest ancestor path containing a build file, an area `CLAUDE.md`, or a plugin manifest directory (`.claude-plugin/`). If none exists, use the top-level path segment. Examples: `iam/iam-session`, `claude/plugins/.curated/data-product`.
 
