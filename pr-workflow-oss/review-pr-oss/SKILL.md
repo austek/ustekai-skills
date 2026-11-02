@@ -191,7 +191,7 @@ Never call the GitHub API to post anything until the user has explicitly approve
    lines must be in the diff.
 5. Show the user the full draft before posting anything:
    - Every new inline comment rendered as `path:line — **label**: text`, plus any top-level-only comments.
-   - Every own thread judged fixed, rendered as `path:line — original: "<short quote>" → addressed: <one-line reasoning>`.
+   - Every own prior thread with its verdict, rendered as `path:line — original: "<short quote>" → addressed|not-addressed: <one-line reasoning>`.
    This is the actual content to be posted, not a paraphrase.
 6. Stop and wait for approval. Anything other than a clear go-ahead is a revision request — edit and
    re-show the draft.
@@ -218,4 +218,4 @@ Never resolve a thread. The author or maintainer closes their own threads.
 ## 8. Report to User
 Short chat summary: counts by severity, link to the review (`html_url`), sign-off/CLA status, scope (full,
 or team scope with in-scope vs. excluded files and the reason), review mode (full or incremental, noting any fallback), number of dropped duplicate findings, and number of my
-own earlier threads that now look fixed. State which issues the PR was checked against and whether each requirement is met, partly met or missing.
+own earlier threads judged `addressed`, plus each `not-addressed` one with its original comment and reasoning. State which issues the PR was checked against and whether each requirement is met, partly met or missing.

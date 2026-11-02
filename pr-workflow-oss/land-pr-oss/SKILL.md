@@ -115,7 +115,8 @@ Top-level review verdicts (approvals/change requests without an inline anchor):
 ```bash
 gh pr view <number> --repo <owner>/<repo> --json reviews --jq '.reviews[] | {author: .author.login, state, body}'
 ```
-Work set = unresolved, non-outdated threads + any `CHANGES_REQUESTED` review body.
+Work set = unresolved, non-outdated threads + any `CHANGES_REQUESTED` review body + any review body on the head SHA
+that contains findings (including `COMMENTED` reviews).
 
 ## 4. Draft Fixes & Confirm Before Pushing
 For each item in the work set, draft the code change. Then, before touching git:
