@@ -25,7 +25,7 @@
     {
       "name": "pr-workflow-oss",
       "description": "Open, review, land, and babysit pull requests on personal or open-source repos.",
-      "version": "1.6.1",
+      "version": "1.7.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
