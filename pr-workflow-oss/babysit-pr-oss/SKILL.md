@@ -90,6 +90,8 @@ Check before the first cycle:
 - One watcher per PR per session. Do not start a second watch on a PR this session already watches.
 
 One cycle:
+0. **Check for a running CodeRabbit review.** Read `gh pr checks <N> --repo <owner>/<repo> --json name,bucket` once.
+   When the CodeRabbit check is `pending`, report `WAITING` for it (§3a) and move on without starting the watch.
 1. **Wait for CI.** Run `gh pr checks <N> --repo <owner>/<repo> --watch` with `run_in_background`, then read its
    output when it finishes. No custom sleep or poll loops for the CI wait. No checks yet after the push settles:
    report that and stop.
@@ -118,8 +120,9 @@ configured (§5a applicability), track when the next review can run so the user 
 
 `next_review_at` per PR, carried across runs like the §2 counts. It is the latest of these times that exist, and
 unset (open) when none does:
-1. A rate-limit notice from `coderabbitai[bot]` on the head SHA (PR issue comments): its `created_at` plus the wait
-   it states ("wait N minutes M seconds"), or plus 60 minutes when it states no parseable wait.
+1. A rate-limit notice from `coderabbitai[bot]` on the head SHA (PR issue comments): its `updated_at` (its
+   `created_at` when never edited, since the bot edits a notice in place) plus the wait it states ("wait N minutes
+   M seconds"), or plus 60 minutes when it states no parseable wait.
 2. The latest `coderabbitai[bot]` review's `submitted_at` plus 60 minutes. The allowance is per developer per repo,
    so take the latest such review across your open PRs in the repo (`gh pr list --author @me`, then each PR's
    reviews), not only this PR's.

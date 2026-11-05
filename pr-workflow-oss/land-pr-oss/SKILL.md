@@ -127,12 +127,15 @@ can need a high-tier diff, and a nit is usually low-tier. Never derive one from 
 | --- | --- | --- | --- |
 | `critical` | `Critical` | group Critical | Wrong behavior, data loss, security. |
 | `major` | `Major` | group Important, label **issue** | Functional or design defect to fix before merge. |
-| `suggestion` | `Minor`, any ```` ```suggestion ```` block with no header | group Suggestions, label **suggestion** | Improvement the author may decline with a reason. |
+| `suggestion` | `Minor`, or a ```` ```suggestion ```` block with no header and no explicit label | group Suggestions, label **suggestion** | Improvement the author may decline with a reason. |
 | `nit` | `Trivial`, `Info`, items under "Nitpick comments" | label **nit** | Style or taste. |
 
-- Read the CodeRabbit header from the comment's first line (`**<icon> Major** · **<category>** · ...`); only
-  `Major` and `Minor` are confirmed in real reviews, the others follow CodeRabbit's documented scale. Match
+- Read the CodeRabbit header from the first line that is not blank and not an HTML comment (`<!-- ... -->`; real
+  comments open with `<!-- coderabbit-ai-generated:v1 -->`), which looks like `**<icon> Major** · **<category>** · ...`.
+  Only `Major` and `Minor` are confirmed in real reviews, the others follow CodeRabbit's documented scale. Match
   case-insensitively.
+- An explicit label (`issue`, `suggestion`, `nit`, `question`) or a header beats code-block syntax: an `issue` that
+  contains a suggestion block stays `major`.
 - A **question** label is not a severity: it needs a drafted reply, never a code change.
 - A `suggestion` or `nit` the work set skips needs no approval and does not stop the run: list it in the report with
   the reason. Applying one, and replying to its thread, still follow §4. `critical` and `major` items always go
@@ -228,8 +231,9 @@ another. Same rules as `create-pr-oss` §3a: a 403 means skip and tell the user,
 `--use-credits` without the user's say-so.
 
 ### CodeRabbit PR review
-A force-push can leave the PR without a review of its tip. After the hourly window resets (`babysit-pr-oss` §3a
-tracks it), trigger one:
+A force-push can leave the PR without a review of its tip. When `babysit-pr-oss` is the caller, do not trigger here:
+report that the tip lacks a review and let its §3a decide (window and `--coderabbit-retrigger`). Standalone, trigger
+one only after the hourly window has reset:
 ```bash
 gh pr comment <number> --body "@coderabbitai full review"
 ```
