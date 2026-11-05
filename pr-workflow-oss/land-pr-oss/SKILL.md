@@ -134,6 +134,9 @@ can need a high-tier diff, and a nit is usually low-tier. Never derive one from 
   `Major` and `Minor` are confirmed in real reviews, the others follow CodeRabbit's documented scale. Match
   case-insensitively.
 - A **question** label is not a severity: it needs a drafted reply, never a code change.
+- A `suggestion` or `nit` the work set skips needs no approval and does not stop the run: list it in the report with
+  the reason. Applying one, and replying to its thread, still follow §4. `critical` and `major` items always go
+  through §4.
 - A finding that matches no row, or whose header cannot be read, is `major`. Never downgrade on a guess.
 - Severity orders the work (critical first), picks which findings get a reply with evidence when declined, and
   decides what blocks `READY` in `babysit-pr-oss` §5a: open critical or major findings block, suggestions and nits
