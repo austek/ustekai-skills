@@ -141,8 +141,8 @@ pending and no accepted trigger already posted for this SHA:
 - `auto`: post it and record its comment URL and the head SHA as a pending trigger before anything else. Then check
   `gh api repos/<o>/<r>/pulls/<N>/reviews` and `gh api repos/<o>/<r>/issues/<N>/comments` for the bot's review or a
   rate-limit notice on the head SHA. A notice resets `next_review_at` from rule 1 and ends the watch; so does one
-  check with neither present, and the trigger stays pending. `auto` applies only to your own PRs. Never
-  `--use-credits`.
+  check with neither present, and the trigger stays pending. `auto` applies only to your own PRs: a `--maintainer`
+  PR uses the `ask` flow whatever the flag says. Never `--use-credits`.
 
 Trigger command: `@coderabbitai review` (incremental) when the latest bot review's `commit_id` is an ancestor of the
 head or none exists, and `@coderabbitai full review` when it is not (a force-push or rebase):
