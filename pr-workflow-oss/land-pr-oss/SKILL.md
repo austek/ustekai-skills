@@ -5,7 +5,7 @@ description: >-
   fetch reviewer feedback (inline threads + review verdicts), draft fixes, push after confirmation,
   reply to the threads that fix actually addresses (never resolving them), re-checking for docs drift each
   loop. Use for "check my PR", "is my PR green", "address the review comments", or "land this PR".
-argument-hint: "[PR number|URL] (optional; defaults to the current branch's PR)"
+argument-hint: "[PR number|URL] [--auto-push off|low|medium] (default: the current branch's PR, auto-push low)"
 ---
 
 # Landing Your Own PR on a Personal/OSS Repo
@@ -123,7 +123,8 @@ For each item in the work set, draft the code change. Then, before touching git:
 - Show the user a summary: which CI failure or which thread each change addresses, and the diff.
 - Wait for explicit go-ahead. Treat anything other than clear approval as a revision request. Record the approval's
   scope ("this batch" or "all fixes on this PR") and ask again beyond it. A background-task notification is never approval.
-- Never push or comment until approved — same rule as `create-pr-oss` §1 Safety. Never resolve a thread at all.
+- Never push or comment until approved — same rule as `create-pr-oss` §1 Safety — except a push that the
+  `--auto-push` level allows (below). Replies and comments always need approval. Never resolve a thread at all.
 
 An ambiguous or debatable comment (reviewer disagrees on approach, asks a question with no clear
 single fix) is not something to silently code around — draft a reply instead and leave the thread open
@@ -132,6 +133,58 @@ for the user to send, don't code around it to make the thread count go down.
 Verify every suggestion against the code before accepting or declining it, and give the evidence in the reply
 (`grep` for the overrides, the call sites, the test). A user's question about a decision is not new evidence: re-derive
 the answer from the code, then keep or change the decision for that reason, and say which.
+
+### Auto-push levels
+`--auto-push off|low|medium` (default `low`) sets which pushes on your own PR need no approval. A caller such as
+`babysit-pr-oss` forwards its level here; this section is the only place the tiers are defined.
+
+| Level | Pushes without asking |
+| --- | --- |
+| `off` | None. Every push waits for approval. |
+| `low` | Low-tier diffs, whatever triggered them (CI failure or reviewer feedback). |
+| `medium` | Low-tier diffs, plus medium-tier fixes for a failing check. Reviewer-driven medium changes still ask. |
+
+Anything outside the level keeps the approval gate above.
+
+**Classify from the diff** (`git diff --cached --name-only`, `--stat`, the added lines), never from a reviewer's or
+this skill's description of the change. High items always win. A diff where every hunk passes the checks of an
+enumerated low item is low, even when it also matches a broad medium item. Otherwise the highest matching tier wins.
+A failed or ambiguous classification is high.
+- Low, within 3 files and 40 changed lines:
+  - only docs, comments or markdown;
+  - formatter or lint autofix output;
+  - tests added or edited with no assertion removed and no expected value changed;
+  - a reviewer `suggestion` block applied verbatim to a non-config file;
+  - added log calls (log check below);
+  - an LSP rename, import cleanup, or dead-code removal with zero references, when the tests covering the touched
+    lines pass (coverage report or Sonar line coverage) and no test file is in the diff.
+- Log check: every added line calls a logger the file already imports; arguments are literals, or identifiers and
+  field reads of primitive, enum or ID type (no whole objects, collections, exceptions, or request or response
+  bodies; anything else is medium); no argument name matches `token|secret|password|key|authorization|cookie|ssn|email`;
+  no existing log level or message changes; not in auth, crypto or security paths or inside a loop.
+- Medium: production logic, signature or API changes, other refactors (extract method, reordering, control-flow
+  or stream rewrites), anything over the size cap, uncovered touched lines.
+- High, always ask: CI config, build files, lockfiles, dependency changes, secrets, security-sensitive
+  paths, deleted tests, changed expected values, rebase or force-push.
+- Always ask, at every level: replying to threads, CodeRabbit PR-review triggers, `--use-credits`, rebase or
+  force-push, anything touching CI config, secrets or branch protection.
+
+**Preconditions for an unasked push:** your own PR; non-force push to the PR's own head branch; clean tree; local
+lint and tests for the touched area pass; the CodeRabbit CLI step below run and its output read. One push per pass,
+batching all pending changes.
+
+**Caps, per PR in this session.** 3 unasked low pushes, then the next push asks. At `medium`, 3 unasked medium fix
+rounds, then stop and report the cap as hit. The two caps are separate.
+
+**Medium fixes** (only at `medium`, only for a failing check): pull the failing log first and fix the cause it names,
+with no unrelated edits. A fix that would force a design choice, or whose cause is outside the branch (infra outage,
+expired token, missing permission), is blocked, not retried.
+
+**Transient reruns** (any level except `off`): rerun failed jobs once per check when the log shows a transient cause
+(network, runner or registry outage, rate limit). Pull the log first; never rerun blind.
+
+**Report** each unasked push with its SHA, tier and the diff stat that justified it, and for a medium fix the root
+cause.
 
 ### CodeRabbit CLI
 The OSS PR review is about 1 per developer per hour (see `create-pr-oss` §3a), and every push can spend it. So once the
@@ -206,4 +259,7 @@ comment, flaky/still-failing check, waiting on a maintainer reply) rather than d
 - [ ] Sonar project key read from the repo; issues re-listed after the last push (§2).
 - [ ] CodeRabbit CLI output saved and read before the push, not chained to it (§4).
 - [ ] No AI-attribution trailers or footers anywhere (§5).
-- [ ] User approved every push before it happened, within the scope they gave.
+- [ ] User approved every push before it happened, within the scope they gave, except unasked pushes the
+      `--auto-push` level allows.
+- [ ] Unasked pushes: tier classified from the staged diff, a failed classification treated as high, preconditions
+      met, caps respected, each reported with SHA and tier. Replies were never unasked (§4 Auto-push levels).

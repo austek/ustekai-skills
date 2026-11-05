@@ -88,7 +88,7 @@ One cycle:
 1. **Wait for CI.** Run `gh pr checks <N> --repo <owner>/<repo> --watch` with `run_in_background`, then read its
    output when it finishes. No custom sleep or poll loops for the CI wait. No checks yet after the push settles:
    report that and stop.
-2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, with the mode's rules (§4). Require it to
+2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, passing `--auto-push <level>` (§4). Require it to
    return after one CI pass or one push, without its §8 re-loop, so this skill counts the cycles and fix rounds.
    For a PR not authored by you and not covered by `--maintainer`, skip this step and only read failures and review
    threads: list the PR's failed checks with `gh pr checks <N> --repo <owner>/<repo> --json name,bucket,link`, take
@@ -111,56 +111,17 @@ waiting on a reviewer is `WAITING`, not a reason to spend remaining cycles; repo
 Every level follows `land-pr-oss`'s non-negotiables: no AI-attribution trailers or footers anywhere, no force-push
 without approval, no suppressing a lint, Sonar or test failure, and no `--no-verify`.
 
-`--auto-push off|low|medium` sets which pushes on your own PRs need no approval. `--auto-fix` is an alias for
-`medium`.
+`--auto-push off|low|medium` (default `low`; `--auto-fix` is an alias for `medium`) sets which pushes on your own
+PRs need no approval. This skill forwards the level to `land-pr-oss`, whose §4 "Auto-push levels" defines the
+tiers, classification, preconditions, caps, medium fixes and transient reruns. Restate none of it.
 
-| Level | Pushes without asking |
-| --- | --- |
-| `off` | None. Every push waits for approval. |
-| `low` (default) | Low-tier diffs, whatever triggered them (CI failure or reviewer feedback). |
-| `medium` | Low-tier diffs, plus medium-tier fixes for a failing check. Reviewer-driven medium changes still ask. |
-
-Everything outside the level keeps the `land-pr-oss` approval gate. The cycle ends at the point where
-`land-pr-oss` needs approval: show the drafted change and the check or thread it addresses, then stop the run as
-`BLOCKED: needs approval`. The user re-runs the skill, or approves in session and the next cycle continues.
-
-**Classify from the diff** (`git diff --cached --name-only`, `--stat`, the added lines), never from a reviewer's or
-this skill's description of the change. The highest matching tier wins; a failed or ambiguous classification is
-medium.
-- Low, within 3 files and 40 changed lines:
-  - only docs, comments or markdown;
-  - formatter or lint autofix output;
-  - tests added or edited with no assertion removed and no expected value changed;
-  - a reviewer `suggestion` block applied verbatim to a non-config file;
-  - added log calls (log check below);
-  - an LSP rename, import cleanup, or dead-code removal with zero references, when the tests covering the touched
-    lines pass (coverage report or Sonar line coverage) and no test file is in the diff.
-- Log check: every added line calls a logger the file already imports; arguments are literals, identifiers or plain
-  field reads (no calls with side effects); no argument name matches `token|secret|password|key|authorization|cookie|ssn|email`;
-  no existing log level or message changes; not in auth, crypto or security paths or inside a loop.
-- Medium: production logic, signature or API changes, other refactors (extract method, reordering, control-flow
-  or stream rewrites), anything over the size cap, uncovered touched lines.
-- High, always ask: CI config, build files, lockfiles, dependency changes, secrets, security-sensitive
-  paths, deleted tests, changed expected values, rebase or force-push.
-- Always ask, at every level: replying to threads, CodeRabbit PR-review triggers, `--use-credits`, rebase or
-  force-push, anything touching CI config, secrets or branch protection.
-
-**Preconditions for any unasked push:** your own PR; non-force push to the PR's own head branch; clean tree; local
-lint and tests for the touched area pass; local CodeRabbit CLI run before the push when `land-pr-oss` §4 says it
-applies, with its output read. One push per cycle, batching all pending changes.
-
-**Caps.** 3 unasked low pushes per PR, then the next push asks. At `medium`, 3 unasked medium fix rounds per PR,
-then `EXHAUSTED`. The two caps are separate, and review rounds count toward neither `--cycles` nor the medium cap (§3).
-
-**Medium fixes** (only at `medium`, only for a failing check): pull the failing log first and fix the cause it
-names, with no unrelated edits. A fix that would force a design choice, or whose cause is outside the branch (infra
-outage, expired token, missing permission), is `BLOCKED`, not retried.
-
-**Transient reruns** (any level except `off`): rerun failed jobs once per check when the log shows a transient
-cause (network, runner or registry outage, rate limit). Pull the log first; never rerun blind.
-
-**Report** each unasked push with its SHA, tier and the diff stat that justified it, and for a medium fix the root
-cause.
+This skill adds:
+- Everything outside the level keeps the `land-pr-oss` approval gate. The cycle ends where `land-pr-oss` needs
+  approval: show the drafted change and the check or thread it addresses, then stop the run as
+  `BLOCKED: needs approval`. The user re-runs the skill, or approves in session and the next cycle continues.
+- The medium cap being hit, as `land-pr-oss` reports it, is `EXHAUSTED`.
+- Review rounds count toward neither `--cycles` nor the medium cap (§3).
+- The report lists each unasked push with its SHA, tier and diff stat, and for a medium fix the root cause.
 
 **Maintainer (`--maintainer`).** Applies `--auto-push off` to a PR someone else authored, and only when all hold:
 - `gh repo view <owner>/<repo> --json viewerPermission -q .viewerPermission` is `WRITE`, `MAINTAIN` or `ADMIN`.
@@ -235,9 +196,8 @@ line or comment URL that shows it. Keep the report short; do not restate what `l
       approvals stayed with the parent.
 - [ ] CI waited with `gh pr checks --watch` in the background, not a hand-written loop.
 - [ ] Failure logs read before any fix or rerun; no blind retries.
-- [ ] Unasked pushes: only tiers the `--auto-push` level allows, classified from the staged diff, preconditions met,
-      non-force, at most 3 low pushes and 3 medium rounds per PR, each reported with SHA and tier. Medium only for
-      failing checks. Nothing else pushed or replied to without approval; none on a `--maintainer` PR.
+- [ ] `--auto-push <level>` forwarded to `land-pr-oss`, which classified each unasked push; each was reported with
+      SHA and tier. Nothing else pushed or replied to without approval; none on a `--maintainer` PR.
 - [ ] Review rounds counted toward neither `--cycles` nor the medium cap.
 - [ ] §5a gate read against the current head SHA before declaring `READY` or merging at the user's request: no
       unresolved threads, no undismissed `CHANGES_REQUESTED`, every review and inline comment read across all pages,
