@@ -146,15 +146,18 @@ the answer from the code, then keep or change the decision for that reason, and 
 
 Anything outside the level keeps the approval gate above.
 
-**Classify from the diff** (`git diff --cached --name-only`, `--stat`, the added lines), never from a reviewer's or
-this skill's description of the change. High items always win. A diff where every hunk passes the checks of an
+**Classify from the diff** of everything the push would send: `git diff @{push} --name-only`, `--stat` and the added
+lines. That covers earlier unpushed commits as well as staged and unstaged edits; never classify the staged part alone.
+Never classify from a reviewer's or this skill's description of the change. High items always win. A diff where every hunk passes the checks of an
 enumerated low item is low, even when it also matches a broad medium item. Otherwise the highest matching tier wins.
 A failed or ambiguous classification is high.
 - Low, within 3 files and 40 changed lines:
-  - only docs, comments or markdown;
+  - only docs, comments or markdown that does not define agent behavior (agent-instruction files are medium or
+    high, below);
   - formatter or lint autofix output;
   - tests added or edited with no assertion removed and no expected value changed;
-  - a reviewer `suggestion` block applied verbatim to a non-config file;
+  - a reviewer `suggestion` block applied verbatim to a non-config file, when the applied lines also pass every
+    check of any other tier item they match (for example the log check for a suggested log call);
   - added log calls (log check below);
   - an LSP rename, import cleanup, or dead-code removal with zero references, when the tests covering the touched
     lines pass (coverage report or Sonar line coverage) and no test file is in the diff.
@@ -163,9 +166,11 @@ A failed or ambiguous classification is high.
   bodies; anything else is medium); no argument name matches `token|secret|password|key|authorization|cookie|ssn|email`;
   no existing log level or message changes; not in auth, crypto or security paths or inside a loop.
 - Medium: production logic, signature or API changes, other refactors (extract method, reordering, control-flow
-  or stream rewrites), anything over the size cap, uncovered touched lines.
+  or stream rewrites), anything over the size cap, uncovered touched lines, and any edit to an agent-instruction
+  file (`SKILL.md`, `CLAUDE.md`, `AGENTS.md`, rule files, hooks), classified by its behavioral effect.
 - High, always ask: CI config, build files, lockfiles, dependency changes, secrets, security-sensitive
-  paths, deleted tests, changed expected values, rebase or force-push.
+  paths, deleted tests, changed expected values, rebase or force-push, and any change to an agent-instruction file
+  that alters approval, push, permission or tier rules.
 - Always ask, at every level: replying to threads, CodeRabbit PR-review triggers, `--use-credits`, rebase or
   force-push, anything touching CI config, secrets or branch protection.
 

@@ -68,8 +68,10 @@ More than one PR resolves: print the list (`owner/repo#N title`) and ask the use
 cycle. Process PRs one at a time; each gets its own `--cycles` budget. With more than one PR, run each PR's cycles in its
 own subagent (Agent tool) so one PR's logs and diffs never enter another PR's context or the parent's. The parent
 holds every approval prompt and prints the §6 report. The subagent receives the PR, flags and this skill's rules,
-including no AI attribution and no thread resolution, and returns only its report row, the evidence for any
-non-`READY` state, and any drafted change awaiting approval. A single PR runs inline. Apply the 10-PR cap after the draft filter and
+including no AI attribution and no thread resolution, plus the PR's running counts of unasked low pushes and
+medium fix rounds (zero on the first run; a repeated `/loop` run starts a fresh subagent, so the parent carries
+the counts forward). It returns only its report row, each unasked push with SHA, tier and diff stat, the updated
+counts, the evidence for any non-`READY` state, and any drafted change awaiting approval. A single PR runs inline. Apply the 10-PR cap after the draft filter and
 report how many eligible PRs remain beyond it.
 
 ## 3. Cycle (per PR)
