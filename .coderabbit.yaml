@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+reviews:
+  profile: chill
+  high_level_summary: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/*.lock"
+    - "!.idea/**"
+    - "!.serena/**"
+    - "!.superpowers/**"
+  path_instructions:
+    - path: "**/SKILL.md"
+      instructions: |
+        Check that frontmatter has name and description, and that the description states when the skill triggers.
+        Check argument tables, examples and the checklist against the body, and section references (§N) against
+        the headings they cite. Flag instructions that conflict with another skill in the same plugin.
+        Flag any step that pushes, posts, merges or deletes without an approval gate or an explicit, bounded exception.
+        Flag AI-attribution trailers or footers in any commit, PR or comment template.
+    - path: ".claude-plugin/marketplace.json"
+      instructions: |
+        Valid JSON. Each plugin's version must match the release it ships in (minor for new behavior or
+        defaults, patch for fixes).
+    - path: "{pr-workflow-oss,dev-utilities,language-personas,architecture,productivity}/**"
+      instructions: |
+        When this PR changes files here, .claude-plugin/marketplace.json must bump this plugin's version in the
+        same PR (minor for new behavior or defaults, patch for fixes). Flag the PR when it does not.
+    - path: "language-personas/**/rules/*.md"
+      instructions: |
+        Each rule follows the neighbouring _template.md and belongs to a section listed in _sections.md.
+        Examples must compile or run as written.
+    - path: "dev-utilities/audit/**"
+      instructions: |
+        Python. Prefer pure functions and errors as values. New behavior needs a test under dev-utilities/audit/tests.
+  tools:
+    markdownlint:
+      enabled: true
+    ruff:
+      enabled: true
+    shellcheck:
+      enabled: true

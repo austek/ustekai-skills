@@ -5,7 +5,7 @@ description: >-
   land-pr-oss on each cycle. Target one PR (default: the current branch's), a repo, or every repo of a
   GitHub user or org. Use for "babysit my PR", "watch CI on my PRs", "keep my PRs green", or "babysit all my
   PRs in <org>". Never merges.
-argument-hint: "[N|URL|owner/repo#N|owner/repo|owner] [--author LOGIN|all] [--maintainer] [--cycles N] [--auto-fix] [--include-drafts] | help (default: current branch's PR, your PRs, 3 cycles, approval gates)"
+argument-hint: "[N|URL|owner/repo#N|owner/repo|owner] [--author LOGIN|all] [--maintainer] [--cycles N] [--auto-push off|low|medium] [--include-drafts] | help (default: current branch's PR, your PRs, 3 cycles, auto-push low, approval gates for the rest)"
 ---
 
 # Babysitting Your PRs on Personal/OSS Repos
@@ -24,9 +24,10 @@ what this skill may do.
 | --- | --- | --- |
 | target | current branch's PR | `N`, `#N`, PR URL, `owner/repo#N` (one PR); `owner/repo` (open PRs in that repo); `owner` (open PRs across every repo of that user or org) |
 | `--author LOGIN\|all` | your `gh` login | Whose PRs a repo or owner target lists. `all` lists every author. A PR not authored by you is report-only unless `--maintainer` applies (§2). |
-| `--maintainer` | off | Lets Mode A act on other authors' PRs in repos where you have write access (§4). |
+| `--maintainer` | off | Lets the skill act, with approval for every push, on other authors' PRs in repos where you have write access (§4). |
 | `--cycles N` | 3 | Watch cycles per PR (§3). A bare number in the invocation text, such as "watch 5 times", sets it too. |
-| `--auto-fix` | off | Mode B (§4): push failing-check fixes on your own PRs without asking. Off means Mode A. |
+| `--auto-push off\|low\|medium` | `low` | Which pushes on your own PRs need no approval (§4): `off` none, `low` low-risk diffs, `medium` also failing-check fixes. |
+| `--auto-fix` | | Alias for `--auto-push medium`. |
 | `--include-drafts` | off | Include draft PRs when the target is a repo or owner. |
 | `help` or `?` | | Print this table and the examples below, then stop. Take no other action. |
 
@@ -35,8 +36,9 @@ Examples (print these for `help`):
 ```text
 /babysit-pr-oss                                  current branch's PR, 3 cycles, approval gates
 /babysit-pr-oss 456 --cycles 5                   one PR, 5 cycles
+/babysit-pr-oss 456 --auto-push off              one PR, every push needs approval
 /babysit-pr-oss austek/dotfiles                  all your open PRs in one repo
-/babysit-pr-oss austek --auto-fix                all your open PRs under a user or org, auto-push CI fixes
+/babysit-pr-oss austek --auto-push medium        all your open PRs under a user or org, also auto-push CI fixes
 /babysit-pr-oss austek/dotfiles --author all     everyone's PRs; others' are report-only
 /babysit-pr-oss austek/dotfiles --author all --maintainer    also fix others' PRs (approval for every push)
 /loop 20m /babysit-pr-oss austek --cycles 1      continuous coverage
@@ -58,12 +60,18 @@ Examples (print these for `help`):
 
 **Authorship decides what the skill may do.** A PR authored by the login from step 1 gets the full cycle (§3).
 A PR by anyone else is report-only: watch CI, summarize failing checks with log evidence and open review threads,
-and stop. No `land-pr-oss` mutations, fixes, pushes, replies or reruns, and `--auto-fix` never
+and stop. No `land-pr-oss` mutations, fixes, pushes, replies or reruns, and auto-push never
 applies to it. Label such rows `(not yours)` in the report. `--maintainer` lifts this for one PR at a time under the
 conditions in §4.
 
 More than one PR resolves: print the list (`owner/repo#N title`) and ask the user to confirm before the first
-cycle. Process PRs one at a time; each gets its own `--cycles` budget. Apply the 10-PR cap after the draft filter and
+cycle. Process PRs one at a time; each gets its own `--cycles` budget. With more than one PR, run each PR's cycles in its
+own subagent (Agent tool) so one PR's logs and diffs never enter another PR's context or the parent's. The parent
+holds every approval prompt and prints the §6 report. The subagent receives the PR, flags and this skill's rules,
+including no AI attribution and no thread resolution, plus the PR's running counts of unasked low pushes and
+medium fix rounds (zero on the first run; a repeated `/loop` run starts a fresh subagent, so the parent carries
+the counts forward). It returns only its report row, each unasked push with SHA, tier and diff stat, the updated
+counts, the evidence for any non-`READY` state, and any drafted change awaiting approval. A single PR runs inline. Apply the 10-PR cap after the draft filter and
 report how many eligible PRs remain beyond it.
 
 ## 3. Cycle (per PR)
@@ -82,7 +90,7 @@ One cycle:
 1. **Wait for CI.** Run `gh pr checks <N> --repo <owner>/<repo> --watch` with `run_in_background`, then read its
    output when it finishes. No custom sleep or poll loops for the CI wait. No checks yet after the push settles:
    report that and stop.
-2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, with the mode's rules (§4). Require it to
+2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, passing `--auto-push <level>` (§4). Require it to
    return after one CI pass or one push, without its §8 re-loop, so this skill counts the cycles and fix rounds.
    For a PR not authored by you and not covered by `--maintainer`, skip this step and only read failures and review
    threads: list the PR's failed checks with `gh pr checks <N> --repo <owner>/<repo> --json name,bucket,link`, take
@@ -93,39 +101,34 @@ One cycle:
    first, since it reads `DIRTY` for a few seconds. A terminal state ends the PR's cycles; otherwise start the next
    cycle after the push, which re-triggers CI.
 
-Consume a cycle only when CI ran to completion. A PR with green checks that is waiting on a reviewer is `WAITING`,
-not a reason to spend remaining cycles; report it and move on. For continuous coverage, the user pairs this with
+Consume a cycle only when CI ran to completion and the cycle fixed or investigated a failing check. A review round
+(drafting fixes or replies for reviewer threads, review bodies or bot findings, and the push that follows) does not
+count toward `--cycles` or the medium fix cap (§4). Review-driven pushes that §4 lets through unasked are low-tier
+and capped at 3 per PR, and the rest wait for approval, which bounds the rounds. If CI then fails on that push, the next cycle that works the failure counts. A PR with green checks that is
+waiting on a reviewer is `WAITING`, not a reason to spend remaining cycles; report it and move on. For continuous coverage, the user pairs this with
 `/loop`, for example `/loop 20m /babysit-pr-oss owner --cycles 1`.
 
-## 4. Modes
+## 4. Auto-push levels
 
-Both modes follow `land-pr-oss`'s non-negotiables: no AI-attribution trailers or footers anywhere, no force-push
+Every level follows `land-pr-oss`'s non-negotiables: no AI-attribution trailers or footers anywhere, no force-push
 without approval, no suppressing a lint, Sonar or test failure, and no `--no-verify`.
 
-**Mode A: approval gates (default).** Keep every `land-pr-oss` approval gate. Each cycle ends at the point where
-`land-pr-oss` needs approval: show the drafted fix and the check or thread it addresses, then stop the run as
-`BLOCKED: needs approval`. Nothing is pushed, replied to or rerun without the user's go-ahead. The user
-re-runs the skill, or approves in session and the next cycle continues.
+`--auto-push off|low|medium` (default `low`; `--auto-fix` is an alias for `medium`) sets which pushes on your own
+PRs need no approval. This skill forwards the level to `land-pr-oss`, whose §4 "Auto-push levels" defines the
+tiers, classification, preconditions, caps, medium fixes and transient reruns. Restate none of it.
 
-**Mode B: `--auto-fix`.** Overrides `land-pr-oss`'s push approval for one class of change only:
-- Allowed without asking: fix a failing check on the PR's own head branch, commit, push (non-force), and rerun
-  failed jobs once per check when the log shows a transient cause (network, runner or registry outage, rate limit).
-  Pull the log first; never rerun blind.
-- Cap: 3 pushed fix rounds per PR, one push per cycle batching all pending fixes. After the cap, `EXHAUSTED`.
-- Still needs approval: rebase or force-push, replying to threads, code changes driven by reviewer
-  comments, CodeRabbit PR-review triggers, `--use-credits`, anything touching CI config, secrets or branch
-  protection.
-- Run the local CodeRabbit CLI before each push when `land-pr-oss` §4 says it applies, and read its output before
-  pushing.
-- A fix that changes a test's expected value to get a pass is allowed only when the behavior changed and the
-  assertion pinned the old behavior; say so in the report.
-- A fix that would force a design choice, or whose cause is outside the branch (infra outage, expired token,
-  missing permission), is `BLOCKED`, not retried.
+This skill adds:
+- Everything outside the level keeps the `land-pr-oss` approval gate. The cycle ends where `land-pr-oss` needs
+  approval: show the drafted change and the check or thread it addresses, then stop the run as
+  `BLOCKED: needs approval`. The user re-runs the skill, or approves in session and the next cycle continues.
+- The medium cap being hit, as `land-pr-oss` reports it, is `EXHAUSTED`.
+- Review rounds count toward neither `--cycles` nor the medium cap (§3).
+- The report lists each unasked push with its SHA, tier and diff stat, and for a medium fix the root cause.
 
-**Maintainer (`--maintainer`).** Applies Mode A to a PR someone else authored, and only when all hold:
+**Maintainer (`--maintainer`).** Applies `--auto-push off` to a PR someone else authored, and only when all hold:
 - `gh repo view <owner>/<repo> --json viewerPermission -q .viewerPermission` is `WRITE`, `MAINTAIN` or `ADMIN`.
 - The head branch is in the same repo, or the PR has `maintainerCanModify` true (`gh pr view --json maintainerCanModify`).
-- The user approves each push, as in Mode A. `--auto-fix` never applies; with both flags, the PR is Mode A.
+- The user approves each push, as at `--auto-push off`. Any higher level is ignored for this PR.
 
 Differences from your own PRs: add commits to the contributor's branch with `gh pr checkout`, never rebase or
 force-push it, and sign off only if the repo requires it. Draft replies to reviewer threads for the user to send. If a condition fails, the PR stays report-only and the
@@ -137,8 +140,8 @@ report says which one.
 | --- | --- | --- |
 | `READY` | All checks pass, `mergeStateStatus` is `CLEAN`, no pending drafted reply, and the §5a gate is clear | Report; never merge |
 | `WAITING` | Checks pass; waiting on a reviewer or maintainer, or a review bot has not reviewed the head commit | Report who and since when |
-| `BLOCKED` | Needs approval (Mode A), conflicts, debatable comment, infra or auth failure, design decision | Report the blocker with evidence |
-| `EXHAUSTED` | `--cycles` used, or Mode B fix cap hit, with checks still failing | Report what is still red and the last root cause |
+| `BLOCKED` | Needs approval (§4), conflicts, debatable comment, infra or auth failure, design decision | Report the blocker with evidence |
+| `EXHAUSTED` | `--cycles` used, or the medium fix cap hit, with checks still failing | Report what is still red and the last root cause |
 | `CLOSED` | PR merged or closed | Report; stop |
 
 `READY` also requires the `land-pr-oss` §8 stop conditions. Never declare `READY` from a green check list alone.
@@ -191,11 +194,13 @@ line or comment URL that shows it. Keep the report short; do not restate what `l
       covered by `--maintainer` with write access verified and every push approved. Other PRs were only read.
 - [ ] No thread resolved on any PR. `--maintainer`: no rebase, no force-push on a contributor's PR.
 - [ ] `help` prints the table and examples and does nothing else.
-- [ ] Multi-PR target list confirmed by the user before the first cycle.
+- [ ] Multi-PR target list confirmed by the user before the first cycle; each PR ran in its own subagent, and
+      approvals stayed with the parent.
 - [ ] CI waited with `gh pr checks --watch` in the background, not a hand-written loop.
 - [ ] Failure logs read before any fix or rerun; no blind retries.
-- [ ] Mode A: nothing pushed or replied to without approval. Mode B: only failing-check fixes pushed, at
-      most 3 rounds, non-force.
+- [ ] `--auto-push <level>` forwarded to `land-pr-oss`, which classified each unasked push; each was reported with
+      SHA and tier. Nothing else pushed or replied to without approval; none on a `--maintainer` PR.
+- [ ] Review rounds counted toward neither `--cycles` nor the medium cap.
 - [ ] §5a gate read against the current head SHA before declaring `READY` or merging at the user's request: no
       unresolved threads, no undismissed `CHANGES_REQUESTED`, every review and inline comment read across all pages,
       Sonar issues, Sonar hotspots and code-scanning alerts at zero, no `skipping` or missing check for a configured
