@@ -71,7 +71,7 @@ cycle. Process PRs one at a time; each gets its own `--cycles` budget. With more
 own subagent (Agent tool) so one PR's logs and diffs never enter another PR's context or the parent's. The parent
 holds every approval prompt and prints the §6 report. The subagent receives the PR, flags and this skill's rules,
 including no AI attribution and no thread resolution, plus the PR's running counts of unasked low pushes and
-medium fix rounds, its `next_review_at` (§3a), and the head SHA and comment URL of each accepted CodeRabbit trigger
+medium fix rounds, its `next_review_at` (§3a), and the head SHA and comment URL of each posted CodeRabbit trigger and whether it is pending, accepted or rate-limited
 (zero or unset on the first run; a repeated `/loop` run starts a fresh subagent, so the parent carries them forward).
 It returns only its report row, each unasked push with SHA, tier and diff stat, the updated counts,
 `next_review_at` and triggers, the evidence for any non-`READY` state, and any drafted change awaiting approval. A single PR runs inline. Apply the 10-PR cap after the draft filter and
@@ -116,15 +116,13 @@ waiting on a reviewer is `WAITING`, not a reason to spend remaining cycles; repo
 CodeRabbit's PR review is rate limited per developer (`create-pr-oss` §3a). For a PR where CodeRabbit is
 configured (§5a applicability), track when the next review can run so the user need not remember it.
 
-`next_review_at` per PR, carried across runs like the §2 counts:
-1. A rate-limit notice from `coderabbitai[bot]` on the head SHA (PR issue comments) that states a wait ("wait N
-   minutes M seconds") gives `next_review_at` = the notice's `created_at` plus that wait.
-2. Otherwise the latest `coderabbitai[bot]` review's `submitted_at` plus 60 minutes. The allowance is per developer
-   per repo, so take the latest such review across your open PRs in the repo (`gh pr list --author @me`, then each
-   PR's reviews), not only this PR's.
-3. A notice states no parseable wait: the later of the notice's `created_at` plus 60 minutes and, when a review
-   exists, rule 2's time. The window is closed until then.
-4. Neither exists: unset. An unset window is open.
+`next_review_at` per PR, carried across runs like the §2 counts. It is the latest of these times that exist, and
+unset (open) when none does:
+1. A rate-limit notice from `coderabbitai[bot]` on the head SHA (PR issue comments): its `created_at` plus the wait
+   it states ("wait N minutes M seconds"), or plus 60 minutes when it states no parseable wait.
+2. The latest `coderabbitai[bot]` review's `submitted_at` plus 60 minutes. The allowance is per developer per repo,
+   so take the latest such review across your open PRs in the repo (`gh pr list --author @me`, then each PR's
+   reviews), not only this PR's.
 
 When CodeRabbit has no gate-clearing review or completion comment on the head SHA (§5a) and the window is closed,
 the state is `WAITING` and the report names `next_review_at`. Under dynamic `/loop`, schedule the next run for
@@ -137,18 +135,20 @@ When the window is open and the head SHA has no gate-clearing review or completi
 pending and no accepted trigger already posted for this SHA:
 - Report-only PRs (§2, without `--maintainer`): draft and post nothing. Report the head state and stop.
 - `ask` (default): draft the trigger comment, show it, and stop the PR as `BLOCKED: needs approval`.
-- `auto`: post it, then check `gh api repos/<o>/<r>/pulls/<N>/reviews` and
-  `gh api repos/<o>/<r>/issues/<N>/comments` for the bot's review or a rate-limit notice on the head SHA. A notice
-  resets `next_review_at` from rules 1 and 3 and ends the watch; so does one check with neither present. `auto`
-  applies only to your own PRs. Never `--use-credits`.
+- `auto`: post it and record its comment URL and the head SHA as a pending trigger before anything else. Then check
+  `gh api repos/<o>/<r>/pulls/<N>/reviews` and `gh api repos/<o>/<r>/issues/<N>/comments` for the bot's review or a
+  rate-limit notice on the head SHA. A notice resets `next_review_at` from rule 1 and ends the watch; so does one
+  check with neither present, and the trigger stays pending. `auto` applies only to your own PRs. Never
+  `--use-credits`.
 
 Trigger command: `@coderabbitai review` (incremental) when the latest bot review's `commit_id` is an ancestor of the
 head or none exists, and `@coderabbitai full review` when it is not (a force-push or rebase):
 `gh api repos/<o>/<r>/compare/<reviewed-sha>...<head-sha> --jq .status` returns `diverged` or `behind` for a rewrite.
 
-A trigger counts once the bot accepts it, so a trigger answered by a rate-limit notice does not: post again after the
-window reopens. At most one accepted trigger per head SHA. Report each posted trigger with its comment URL and the SHA
-it targeted.
+A pending trigger blocks another one for the same head SHA, across `/loop` runs. Only a definite rate-limit notice
+answering it releases it: post again after the window reopens. A pending trigger with no answer after 15 minutes is
+reported and left for the user to decide; never repost it unasked. At most one accepted trigger per head SHA.
+Report each posted trigger with its comment URL and the SHA it targeted.
 
 ## 4. Auto-push levels
 
