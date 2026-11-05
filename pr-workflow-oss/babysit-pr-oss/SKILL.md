@@ -5,7 +5,7 @@ description: >-
   land-pr-oss on each cycle. Target one PR (default: the current branch's), a repo, or every repo of a
   GitHub user or org. Use for "babysit my PR", "watch CI on my PRs", "keep my PRs green", or "babysit all my
   PRs in <org>". Never merges.
-argument-hint: "[N|URL|owner/repo#N|owner/repo|owner] [--author LOGIN|all] [--maintainer] [--cycles N] [--auto-push off|low|medium] [--include-drafts] | help (default: current branch's PR, your PRs, 3 cycles, auto-push low, approval gates for the rest)"
+argument-hint: "[N|URL|owner/repo#N|owner/repo|owner] [--author LOGIN|all] [--maintainer] [--cycles N] [--auto-push off|low|medium] [--coderabbit-retrigger ask|auto] [--include-drafts] | help (default: current branch's PR, your PRs, 3 cycles, auto-push low, ask before each CodeRabbit trigger, approval gates for the rest)"
 ---
 
 # Babysitting Your PRs on Personal/OSS Repos
@@ -28,6 +28,7 @@ what this skill may do.
 | `--cycles N` | 3 | Watch cycles per PR (§3). A bare number in the invocation text, such as "watch 5 times", sets it too. |
 | `--auto-push off\|low\|medium` | `low` | Which pushes on your own PRs need no approval (§4): `off` none, `low` low-risk diffs, `medium` also failing-check fixes. |
 | `--auto-fix` | | Alias for `--auto-push medium`. |
+| `--coderabbit-retrigger ask\|auto` | `ask` | What happens when a PR's CodeRabbit window reopens with the head commit unreviewed (§3a): `ask` drafts the trigger comment for approval, `auto` posts it. |
 | `--include-drafts` | off | Include draft PRs when the target is a repo or owner. |
 | `help` or `?` | | Print this table and the examples below, then stop. Take no other action. |
 
@@ -37,6 +38,7 @@ Examples (print these for `help`):
 /babysit-pr-oss                                  current branch's PR, 3 cycles, approval gates
 /babysit-pr-oss 456 --cycles 5                   one PR, 5 cycles
 /babysit-pr-oss 456 --auto-push off              one PR, every push needs approval
+/babysit-pr-oss 456 --coderabbit-retrigger auto  one PR, post the CodeRabbit trigger when its window reopens
 /babysit-pr-oss austek/dotfiles                  all your open PRs in one repo
 /babysit-pr-oss austek --auto-push medium        all your open PRs under a user or org, also auto-push CI fixes
 /babysit-pr-oss austek/dotfiles --author all     everyone's PRs; others' are report-only
@@ -69,9 +71,9 @@ cycle. Process PRs one at a time; each gets its own `--cycles` budget. With more
 own subagent (Agent tool) so one PR's logs and diffs never enter another PR's context or the parent's. The parent
 holds every approval prompt and prints the §6 report. The subagent receives the PR, flags and this skill's rules,
 including no AI attribution and no thread resolution, plus the PR's running counts of unasked low pushes and
-medium fix rounds (zero on the first run; a repeated `/loop` run starts a fresh subagent, so the parent carries
-the counts forward). It returns only its report row, each unasked push with SHA, tier and diff stat, the updated
-counts, the evidence for any non-`READY` state, and any drafted change awaiting approval. A single PR runs inline. Apply the 10-PR cap after the draft filter and
+medium fix rounds and its `next_review_at` (§3a) (zero or unset on the first run; a repeated `/loop` run starts a
+fresh subagent, so the parent carries them forward). It returns only its report row, each unasked push with SHA,
+tier and diff stat, the updated counts and `next_review_at`, the evidence for any non-`READY` state, and any drafted change awaiting approval. A single PR runs inline. Apply the 10-PR cap after the draft filter and
 report how many eligible PRs remain beyond it.
 
 ## 3. Cycle (per PR)
@@ -107,6 +109,31 @@ count toward `--cycles` or the medium fix cap (§4). Review-driven pushes that �
 and capped at 3 per PR, and the rest wait for approval, which bounds the rounds. If CI then fails on that push, the next cycle that works the failure counts. A PR with green checks that is
 waiting on a reviewer is `WAITING`, not a reason to spend remaining cycles; report it and move on. For continuous coverage, the user pairs this with
 `/loop`, for example `/loop 20m /babysit-pr-oss owner --cycles 1`.
+
+### 3a. CodeRabbit window
+
+CodeRabbit's PR review is rate limited per developer (`create-pr-oss` §3a). For a PR where CodeRabbit is
+configured (§5a applicability), track when the next review can run so the user need not remember it.
+
+`next_review_at` per PR, carried across runs like the §2 counts:
+1. A rate-limit notice from `coderabbitai[bot]` on the head SHA (PR issue comments) that states a wait ("wait N
+   minutes M seconds") gives `next_review_at` = the notice's `created_at` plus that wait.
+2. Otherwise the latest `coderabbitai[bot]` review's `submitted_at` plus 60 minutes.
+3. Neither exists, or the text cannot be parsed: unset. An unset window is open.
+
+When CodeRabbit has no review on the head SHA (§5a) and the window is closed, the state is `WAITING` and the
+report names `next_review_at`. Under dynamic `/loop`, schedule the next run for `next_review_at` plus 60 seconds
+instead of a fixed interval. Outside `/loop`, print the time.
+
+When the window is open and the head SHA is unreviewed, with no push pending and no trigger already posted for this
+SHA:
+- `ask` (default): draft the trigger comment, show it, and stop the PR as `BLOCKED: needs approval`.
+- `auto`: post it once, then watch `gh api repos/<o>/<r>/pulls/<N>/reviews` for the bot's review. The comment is
+  `@coderabbitai review` (incremental) by default and `@coderabbitai full review` after a force-push.
+  `auto` applies only to your own PRs. Never more than one trigger per head SHA, and a rate-limit reply resets
+  `next_review_at` from rule 1 instead of retrying. Never `--use-credits`.
+
+Report each posted trigger with its comment URL and the SHA it targeted.
 
 ## 4. Auto-push levels
 
@@ -157,8 +184,8 @@ earlier commit proves nothing.
 | --- | --- | --- |
 | Review threads | the `land-pr-oss` §3 GraphQL query, following `pageInfo` cursors for threads and for each thread's comments | zero threads with `isResolved` false, outdated ones included; a thread the fix addressed but the reviewer has not resolved is reported, not ignored |
 | Reviews | `gh api --paginate repos/<o>/<r>/pulls/<N>/reviews` | collapse the reviews per reviewer; none has a latest state of `CHANGES_REQUESTED`, whatever commit it targets. Only dismissal or that reviewer's later `APPROVED` review clears it; a later `COMMENTED` review does not. Every review on the head SHA is read |
-| Review bots | the bot's reviews, then its PR comments (`gh api --paginate repos/<o>/<r>/issues/<N>/comments`) | each configured review bot (CodeRabbit) has a review with `commit_id` equal to the head SHA, or a completion comment that names the head SHA (7 characters or more); a comment that names no SHA, or an older one, does not count. Otherwise `WAITING`. A rate-limit notice is not a review |
-| Inline comments and review bodies | `gh api --paginate repos/<o>/<r>/pulls/<N>/comments`, plus the `body` of each review on the head SHA | every comment on the head SHA, and every review body on the head SHA that contains findings, is read and fixed, or skipped with a reason |
+| Review bots | the bot's reviews, then its PR comments (`gh api --paginate repos/<o>/<r>/issues/<N>/comments`) | each configured review bot (CodeRabbit) has a review with `commit_id` equal to the head SHA, or a completion comment that names the head SHA (7 characters or more); a comment that names no SHA, or an older one, does not count. Otherwise `WAITING`, with `next_review_at` (§3a). A rate-limit notice is not a review |
+| Inline comments and review bodies | `gh api --paginate repos/<o>/<r>/pulls/<N>/comments`, plus the `body` of each review on the head SHA | every comment on the head SHA, and every review body on the head SHA that contains findings, is read and fixed, or skipped with a reason. Severity per `land-pr-oss` "Finding severity": an open critical or major finding blocks `READY`; suggestions and nits are listed in the report and do not |
 | Sonar | issues: `curl -s "https://sonarcloud.io/api/issues/search?componentKeys=<key>&pullRequest=<N>&resolved=false&ps=500"`; hotspots: `curl -s "https://sonarcloud.io/api/hotspots/search?projectKey=<key>&pullRequest=<N>&status=TO_REVIEW&ps=500"`; key from the check link's `id=` | both return zero (check `paging.total`, and fetch further pages when it exceeds the page size), whatever the quality gate says |
 | Code scanning | `gh api --paginate "repos/<o>/<r>/code-scanning/alerts?ref=refs/pull/<N>/merge&state=open"` | zero open alerts |
 | Other tools | the link of each non-GitHub check | no finding the tool lists for the PR |
@@ -173,7 +200,7 @@ commented on an old PR does not count. Record each unconfigured source as `N/A` 
 tool whose check is `skipping`, `pending` or absent from `gh pr checks` is not a pass: name it and treat it as
 `WAITING`.
 
-Rate-limited review bots need the user's decision on a manual trigger. When the user asks to merge, run this gate
+A rate-limited review bot is triggered per §3a: with approval at `ask`, without it at `auto`. When the user asks to merge, run this gate
 first; if anything is open, report it and ask instead of merging. When the gate is clear, capture the gated
 `headRefOid` and bind the merge to it with `gh pr merge --match-head-commit <gated-sha>` (or the merge API `sha`
 field). If the head changed since the gate ran, rerun §5a before merging.

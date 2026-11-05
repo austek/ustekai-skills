@@ -118,6 +118,27 @@ gh pr view <number> --repo <owner>/<repo> --json reviews --jq '.reviews[] | {aut
 Work set = unresolved, non-outdated threads + any `CHANGES_REQUESTED` review body + any review body on the head SHA
 that contains findings (including `COMMENTED` reviews).
 
+### Finding severity
+Give every item in the work set one severity before drafting. Severity says how much a finding matters. It is
+separate from the diff tier of the auto-push levels below, which says how risky the fix's diff is: a critical finding
+can need a high-tier diff, and a nit is usually low-tier. Never derive one from the other.
+
+| Severity | CodeRabbit header | `review-pr-oss` | Meaning |
+| --- | --- | --- | --- |
+| `critical` | `Critical` | group Critical | Wrong behavior, data loss, security. |
+| `major` | `Major` | group Important, label **issue** | Functional or design defect to fix before merge. |
+| `suggestion` | `Minor`, any ```` ```suggestion ```` block with no header | group Suggestions, label **suggestion** | Improvement the author may decline with a reason. |
+| `nit` | `Trivial`, `Info`, items under "Nitpick comments" | label **nit** | Style or taste. |
+
+- Read the CodeRabbit header from the comment's first line (`**<icon> Major** · **<category>** · ...`); only
+  `Major` and `Minor` are confirmed in real reviews, the others follow CodeRabbit's documented scale. Match
+  case-insensitively.
+- A **question** label is not a severity: it needs a drafted reply, never a code change.
+- A finding that matches no row, or whose header cannot be read, is `major`. Never downgrade on a guess.
+- Severity orders the work (critical first), picks which findings get a reply with evidence when declined, and
+  decides what blocks `READY` in `babysit-pr-oss` §5a: open critical or major findings block, suggestions and nits
+  do not but are listed.
+
 ## 4. Draft Fixes & Confirm Before Pushing
 For each item in the work set, draft the code change. Then, before touching git:
 - Show the user a summary: which CI failure or which thread each change addresses, and the diff.
@@ -171,7 +192,8 @@ A failed or ambiguous classification is high.
 - High, always ask: CI config, build files, lockfiles, dependency changes, secrets, security-sensitive
   paths, deleted tests, changed expected values, rebase or force-push, and any change to an agent-instruction file
   that alters approval, push, permission or tier rules.
-- Always ask, at every level: replying to threads, CodeRabbit PR-review triggers, `--use-credits`, rebase or
+- Always ask, at every level: replying to threads, CodeRabbit PR-review triggers (except the one `babysit-pr-oss`
+  §3a posts under `--coderabbit-retrigger auto`), `--use-credits`, rebase or
   force-push, anything touching CI config, secrets or branch protection.
 
 **Preconditions for an unasked push:** your own PR; non-force push to the PR's own head branch; clean tree; local
@@ -203,7 +225,8 @@ another. Same rules as `create-pr-oss` §3a: a 403 means skip and tell the user,
 `--use-credits` without the user's say-so.
 
 ### CodeRabbit PR review
-A force-push can leave the PR without a review of its tip. After the hourly window resets, trigger one:
+A force-push can leave the PR without a review of its tip. After the hourly window resets (`babysit-pr-oss` §3a
+tracks it), trigger one:
 ```bash
 gh pr comment <number> --body "@coderabbitai full review"
 ```
