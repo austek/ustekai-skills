@@ -21,21 +21,25 @@ is the PR flow. A PR number, URL or `--team`/`--my-teams` alongside a local flag
 
 | Flags | Diff |
 |---|---|
-| `--branch` | `origin/<base>...HEAD` |
+| `--branch` | `<remote>/<base>...HEAD` |
 | `--uncommitted` | `HEAD` against the working tree, plus untracked files |
-| both | the merge base of `origin/<base>` and `HEAD` against the working tree, plus untracked files |
+| both | the merge base of `<remote>/<base>` and `HEAD` against the working tree, plus untracked files |
 
 1. Skip this step for `--uncommitted` alone. Otherwise `<base>` is the repo's default branch
    (`gh repo view --json defaultBranchRef`), or the branch the user names for a stacked branch; never the branch's own
-   upstream, which hides pushed commits. Run `git fetch origin <base>` and diff against `origin/<base>` with the same
-   fetch-and-diff mechanics as §1 step 6.
-2. Run in the current checkout: no worktree, no PR fetch. With `--uncommitted`, list untracked files from the
-   repository root (`git rev-parse --show-toplevel`) with `git ls-files --others --exclude-standard` and read them in full, since `git diff` omits them; `--branch` alone
-   ignores them. An empty diff means nothing to review: say so and stop.
-3. Run §3 (repo rules, language personas) against the changed files, then §4 delegation in the current checkout against
-   the local diff, ignoring `<huntBase>`, `<head>`, the worktree and team scope. Take `current_code` from the file on
-   disk, except with `--branch` alone, where it comes from `git show HEAD:<path>` so uncommitted edits cannot
-   invalidate a finding about committed code. Skip: review-mode detection, §2, the Gates, API-compatibility,
+   upstream, which hides pushed commits. `<remote>` is the remote that points at the repository the PR targets (`upstream`
+   when it targets the parent of your fork, `origin` when it targets your own fork or repo, as for a stacked parent
+   branch), so a stale fork cannot add unrelated changes. Run `git fetch <remote> <base>` and diff
+   against `<remote>/<base>` with the same fetch-and-diff mechanics as §1 step 6.
+2. Run in the current checkout: no PR fetch. With `--uncommitted`, list untracked files from the repository root
+   (`git rev-parse --show-toplevel`) with `git ls-files --others --exclude-standard`. Read each in full unless it is
+   over 1 MB: list those as unreviewed in step 5. `git diff` omits untracked files; `--branch` alone ignores them.
+   An empty diff means nothing to review: say so and stop.
+3. With `--branch` alone and uncommitted edits present (`git status --porcelain`), run the rest of this step in a
+   temporary `git worktree add <scratch>/review-branch HEAD` and remove it afterward, so edits made since the last
+   commit stay out of delegation and `current_code`. Run §3 (repo rules, language personas) against the changed
+   files, then §4 delegation against the local diff, ignoring `<huntBase>`, `<head>` and team scope. Take
+   `current_code` from the files in the directory under review. Skip: review-mode detection, §2, the Gates, API-compatibility,
    sign-off/CLA and linked-issue bullets of §3, the requirement mapping in §4, §5, §6 except the Findings Format, and §7.
 4. Print the findings in chat, grouped by severity in the §6 Findings Format, each as `path:line — **label**: text`
    (`**label**: text` alone for a cross-cutting finding with no line). Post nothing and call no GitHub write API.
