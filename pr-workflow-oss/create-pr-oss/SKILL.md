@@ -71,6 +71,12 @@ command -v coderabbit >/dev/null && test -f .coderabbit.yaml \
   `@coderabbitai review` in a PR comment.
 - OSS and personal repos only: the diff is sent to CodeRabbit's servers.
 
+## 3b. Self-Review (local)
+Run after §3a and before the first push, and again before any re-push that follows a fix pass. Invoke
+`review-pr-oss --branch --uncommitted` (no PR exists yet; the skill reviews locally and posts nothing). Verify each
+finding against the code, fix the valid ones, and note each skipped one with a reason. Fixes stay local: this step
+never pushes.
+
 ## 4. Fork/Upstream Detection
 Most OSS contributions need a fork — you rarely have direct push access:
 ```bash
@@ -137,6 +143,7 @@ OSS CI often includes a CLA/DCO check bucket — treat it like any other require
 - [ ] Comment pass run if the diff touched comments (§2).
 - [ ] Docs check run; flagged to the user if source changed with no doc file touched (§3).
 - [ ] CodeRabbit local review run before the first push when available (findings verified), or skipped with the reason (§3a).
+- [ ] Self-review run before the first push, valid findings fixed, skipped ones noted with a reason (§3b).
 - [ ] PR targets the correct upstream repo/branch, not your fork's default branch.
 - [ ] Sign-off applied if `CONTRIBUTING.md` requires it.
 - [ ] Description follows the repo's own template, not a Collibra default.

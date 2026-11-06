@@ -4,8 +4,9 @@ description: >-
   Review a PR on any GitHub repo. Reviews the full diff by default; offers to scope review to the files
   owned by a team (`--team`) or by your own teams (`--my-teams`) in CODEOWNERS. Detects languages, applies
   the repo's own CONTRIBUTING.md/CLAUDE.md/.claude/rules rules + language persona skills, checks DCO/CLA
-  sign-off, and delegates to pr-review-toolkit:review-pr. Use for "review this PR" or "review PR #N".
-argument-hint: "[PR number|URL|branch] [--team @org/team] [--my-teams] [--external] (all optional; defaults to the current branch's PR, full diff)"
+  sign-off, and delegates to pr-review-toolkit:review-pr. With `--branch` and/or `--uncommitted` it reviews your
+  own local work with no PR and posts nothing. Use for "review this PR", "review PR #N", or "review my branch/changes".
+argument-hint: "[PR number|URL|branch] [--team @org/team] [--my-teams] [--external] [--branch] [--uncommitted] (all optional; defaults to the current branch's PR, full diff; --branch/--uncommitted review local work instead)"
 ---
 
 # Reviewing a PR
@@ -13,6 +14,32 @@ argument-hint: "[PR number|URL|branch] [--team @org/team] [--my-teams] [--extern
 Default posture: maintainer reviewing an external contribution (or a fellow contributor's PR on a repo
 you don't own). With `--external`, review as a Senior Staff / Principal external reviewer who assumes
 someone else wrote the PR.
+
+## Local Mode (`--branch` / `--uncommitted`)
+Passing either flag reviews your own work in the current checkout. With neither flag, skip this section: §1 onward
+is the PR flow. A PR number, URL or `--team`/`--my-teams` alongside a local flag is a conflict: ask which one is meant.
+
+| Flags | Diff |
+|---|---|
+| `--branch` | `origin/<base>...HEAD` |
+| `--uncommitted` | `HEAD` against the working tree, plus untracked files |
+| both | the merge base of `origin/<base>` and `HEAD` against the working tree, plus untracked files |
+
+1. Skip this step for `--uncommitted` alone. Otherwise `<base>` is the repo's default branch
+   (`gh repo view --json defaultBranchRef`), or the branch the user names for a stacked branch; never the branch's own
+   upstream, which hides pushed commits. Run `git fetch origin <base>` and diff against `origin/<base>` with the same
+   fetch-and-diff mechanics as §1 step 6.
+2. Run in the current checkout: no worktree, no PR fetch. With `--uncommitted`, list untracked files from the
+   repository root (`git rev-parse --show-toplevel`) with `git ls-files --others --exclude-standard` and read them in full, since `git diff` omits them; `--branch` alone
+   ignores them. An empty diff means nothing to review: say so and stop.
+3. Run §3 (repo rules, language personas) against the changed files, then §4 delegation in the current checkout against
+   the local diff, ignoring `<huntBase>`, `<head>`, the worktree and team scope. Take `current_code` from the file on
+   disk, except with `--branch` alone, where it comes from `git show HEAD:<path>` so uncommitted edits cannot
+   invalidate a finding about committed code. Skip: review-mode detection, §2, the Gates, API-compatibility,
+   sign-off/CLA and linked-issue bullets of §3, the requirement mapping in §4, §5, §6 except the Findings Format, and §7.
+4. Print the findings in chat, grouped by severity in the §6 Findings Format, each as `path:line — **label**: text`
+   (`**label**: text` alone for a cross-cutting finding with no line). Post nothing and call no GitHub write API.
+5. Report counts by severity and which diff was reviewed (flags, base, number of untracked files).
 
 ## 1. Resolve PR & Materialize Diff
 1. Identify PR via arg (`/review-pr-oss 456`, URL, branch) or current branch
