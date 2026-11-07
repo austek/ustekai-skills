@@ -23,7 +23,8 @@ done
 
 root="${root/#\~/$HOME}"
 config_dir="${config_dir/#\~/$HOME}"
-[[ -z "$config_dir" ]] || config_dir="$(realpath -m "$config_dir")"
+[[ "$config_dir" != *$'\n'* && "$config_dir" != *$'\r'* ]] || { echo "config dir contains a line break" >&2; exit 64; }
+[[ -z "$config_dir" ]] || config_dir="$(realpath -m -s "$config_dir")"
 [[ -z "$config_dir" || "$boot" == uninstall || -d "$config_dir" ]] \
   || { echo "config dir not found: $config_dir" >&2; exit 66; }
 target="${target/#\~/$HOME}"
@@ -120,7 +121,7 @@ name="${rc_name:-${path##*/}}"
 [[ "$name$path" != *$'\n'* && "$name$path" != *$'\r'* ]] || { echo "name or path contains a line break" >&2; exit 64; }
 [[ -z "$rc_name" || "$rc_name" == "${rc_name//[^A-Za-z0-9_-]/_}" ]] \
   || { echo "--name may only contain letters, digits, '_' and '-'" >&2; exit 64; }
-hash="$(printf %s "$path${config_dir:+|$config_dir}" | sha1sum | cut -c1-6)"
+hash="$(printf %s "$path${config_dir:+$'\n'$config_dir}" | sha1sum | cut -c1-6)"
 session="claude-${name//[^A-Za-z0-9_-]/_}-$hash"
 
 case "$boot" in
