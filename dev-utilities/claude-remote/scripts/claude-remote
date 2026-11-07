@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Usage: claude-remote [--root DIR] [--name NAME] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>
+# Usage: claude-remote [--root DIR] [--name NAME] [--config-dir DIR] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>
 set -euo pipefail
 
 root="${CLAUDE_REMOTE_ROOT:-$HOME/Workspace}"
 settings="${CLAUDE_REMOTE_SETTINGS:-$HOME/.config/dotfiles/claude-profiles/claude_personal.json}"
+config_dir="${CLAUDE_CONFIG_DIR:-}"
 target=""; rc_name=""; trust=0; boot=""
 
 while (( $# )); do
   case "$1" in
     --root) root="${2:?--root needs a directory}"; shift 2 ;;
+    --config-dir) config_dir="${2:?--config-dir needs a directory}"; shift 2 ;;
     --name) rc_name="${2:?--name needs a value}"; shift 2 ;;
     --trust) trust=1; shift ;;
     --install-boot) boot=install; shift ;;
@@ -17,9 +19,13 @@ while (( $# )); do
     *) target="$1"; shift ;;
   esac
 done
-[[ -n "$target" ]] || { echo "usage: claude-remote [--root DIR] [--name NAME] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>" >&2; exit 64; }
+[[ -n "$target" ]] || { echo "usage: claude-remote [--root DIR] [--name NAME] [--config-dir DIR] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>" >&2; exit 64; }
 
 root="${root/#\~/$HOME}"
+config_dir="${config_dir/#\~/$HOME}"
+[[ -z "$config_dir" ]] || config_dir="$(realpath -m "$config_dir")"
+[[ -z "$config_dir" || "$boot" == uninstall || -d "$config_dir" ]] \
+  || { echo "config dir not found: $config_dir" >&2; exit 66; }
 target="${target/#\~/$HOME}"
 
 resolve_path() {
@@ -75,12 +81,16 @@ install_boot() {
   # The unit runs a copy outside the versioned plugin cache so plugin updates cannot break it.
   install -m 755 "$(realpath "$0")" "$bin"
   (( trust )) && exec_args+=(--trust)
+  [[ -n "$config_dir" ]] && exec_args+=(--config-dir "$config_dir")
   exec_args+=("$path")
+  local unset_line=""
+  [[ -n "$config_dir" ]] || unset_line=$'UnsetEnvironment=CLAUDE_CONFIG_DIR\n'
   mkdir -p "${unit%/*}"
   {
     printf '[Unit]\nDescription=Claude remote-control session %s\nAfter=network-online.target\n\n' "$name"
     printf '[Service]\nType=oneshot\nRemainAfterExit=yes\nKillMode=process\n'
     printf 'Environment=%s\nEnvironment=%s\n' "$(sd_quote "PATH=$PATH")" "$(sd_quote "CLAUDE_REMOTE_SETTINGS=$settings")"
+    printf '%s' "$unset_line"
     printf 'ExecStart=%s' "$(sd_quote "${bin//\$/\$\$}")"
     for a in "${exec_args[@]}"; do printf ' %s' "$(sd_quote "${a//\$/\$\$}")"; done
     printf '\n\n[Install]\nWantedBy=default.target\n'
@@ -110,7 +120,7 @@ name="${rc_name:-${path##*/}}"
 [[ "$name$path" != *$'\n'* && "$name$path" != *$'\r'* ]] || { echo "name or path contains a line break" >&2; exit 64; }
 [[ -z "$rc_name" || "$rc_name" == "${rc_name//[^A-Za-z0-9_-]/_}" ]] \
   || { echo "--name may only contain letters, digits, '_' and '-'" >&2; exit 64; }
-hash="$(printf %s "$path" | sha1sum | cut -c1-6)"
+hash="$(printf %s "$path${config_dir:+|$config_dir}" | sha1sum | cut -c1-6)"
 session="claude-${name//[^A-Za-z0-9_-]/_}-$hash"
 
 case "$boot" in
@@ -121,7 +131,9 @@ esac
 if tmux has-session -t "$session" 2>/dev/null; then
   echo "reusing session $session"
 else
-  args=(claude --remote-control "$name")
+  args=(env)
+  if [[ -n "$config_dir" ]]; then args+=("CLAUDE_CONFIG_DIR=$config_dir"); else args+=(-u CLAUDE_CONFIG_DIR); fi
+  args+=(claude --remote-control "$name")
   [[ -f "$settings" ]] && args+=(--settings "$settings")
   tmux new-session -d -s "$session" -c "$path" "$(printf '%q ' "${args[@]}")"
   echo "started session $session"
