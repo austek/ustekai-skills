@@ -101,6 +101,9 @@ install_boot() {
   systemctl --user daemon-reload
   systemctl --user enable --now "${unit##*/}"
   echo "installed ${unit##*/} (linger enabled)"
+  local legacy; legacy="claude-remote-${name//[^A-Za-z0-9_-]/_}-$(printf %s "$path" | sha1sum | cut -c1-6).service"
+  [[ -z "$config_dir" || "$legacy" == "${unit##*/}" ]] || ! systemctl --user is-enabled --quiet "$legacy" 2>/dev/null \
+    || echo "warning: legacy unit $legacy is still enabled and starts a duplicate session; remove it with 'env -u CLAUDE_CONFIG_DIR claude-remote --uninstall-boot ...'" >&2
 }
 
 uninstall_boot() {
