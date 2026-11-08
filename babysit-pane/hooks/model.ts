@@ -76,6 +76,14 @@ export const labelOf = (e: Entry): string => `${repoName(e.repo)}#${e.pr}`
 
 const cycleText = (e: Entry): string => (e.cycles > 0 ? ` ${e.cycle}/${e.cycles}` : '')
 
+/** Display text for the age of the state file; a future `updatedAt` yields `clock skew`. */
+export function ageText(updatedAt: number, now: number): string {
+  const minutes = Math.floor((now - updatedAt) / 60_000)
+  if (minutes < 0) return 'clock skew'
+  if (minutes < 1) return 'updated now'
+  return minutes < 60 ? `updated ${minutes}m ago` : `updated ${Math.floor(minutes / 60)}h ago`
+}
+
 /** The title row of an entry. */
 export const titleOf = (e: Entry): string => `${labelOf(e)} ${e.state}${cycleText(e)}`
 
@@ -84,7 +92,7 @@ export function detailOf(e: Entry, now: number): string[] {
   const checks = `checks ${e.pass} pass, ${e.fail} fail, ${e.pending} pending`
   const threads = `${e.openThreads} open thread${e.openThreads === 1 ? '' : 's'}`
   const window = untilText(e.nextReviewAt, now)
-  const rows = [`${checks} · ${threads}`, ...(window === undefined ? [] : [window])]
+  const rows = [`${checks} · ${threads} · ${ageText(e.updatedAt, now)}`, ...(window === undefined ? [] : [window])]
   return e.next === undefined ? rows : [...rows, `next: ${e.next}`]
 }
 

@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Entry } from '../types'
-import { detailOf, parseEntry, statusOf, untilText, visible } from './model'
+import { ageText, detailOf, parseEntry, statusOf, untilText, visible } from './model'
 
 const NOW = 1_800_000_000_000
 const MIN = 60_000
@@ -73,13 +73,20 @@ test('the review window reads in minutes and says when it is open', () => {
 
 test('the detail rows carry checks, threads, the window and the next step', () => {
   expect(detailOf(entry(), NOW)).toEqual([
-    'checks 8 pass, 0 fail, 1 pending · 3 open threads',
+    'checks 8 pass, 0 fail, 1 pending · 3 open threads · updated 1m ago',
     'CodeRabbit in 12m',
     'next: wait for the homelab install',
   ])
   expect(detailOf(entry({ openThreads: 1, nextReviewAt: undefined, next: undefined }), NOW)).toEqual([
-    'checks 8 pass, 0 fail, 1 pending · 1 open thread',
+    'checks 8 pass, 0 fail, 1 pending · 1 open thread · updated 1m ago',
   ])
+})
+
+test('the age reads in minutes then hours, and a future timestamp reads as clock skew', () => {
+  expect(ageText(NOW, NOW)).toBe('updated now')
+  expect(ageText(NOW - 59 * MIN, NOW)).toBe('updated 59m ago')
+  expect(ageText(NOW - 135 * MIN, NOW)).toBe('updated 2h ago')
+  expect(ageText(NOW + 4 * 24 * 60 * MIN, NOW)).toBe('clock skew')
 })
 
 test('the status entry names the first entry and counts the rest', () => {
