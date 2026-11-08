@@ -291,7 +291,7 @@ over `<name>.json`, so a reader never sees half a file and two sessions never sh
 | `nextReviewAt` | epoch ms, optional | §3a `next_review_at`; omit when the window is open. |
 | `next` | string, optional | One line, written by this skill: what the user does next, or what it waits for. Never copy PR, comment or bot text into it. |
 | `watchId` | string, optional | §3b id of the one live watch job; omit outside watch mode. |
-| `updatedAt` | epoch ms | Time of this write. |
+| `updatedAt` | epoch ms | Time of this write, read from the clock with `date +%s%3N` at write time. Never estimate it or reuse an earlier value: a future value keeps a dead watcher on the pane forever. |
 
 When a read fails (§5a fail closed), write `WAITING`, keep the counts of the last write (zeros on the first write)
 and name the failing source in `next`.
