@@ -18,7 +18,9 @@ const FILE = JSON.stringify({
   updatedAt: NOW - 60_000,
 })
 
-function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<string, string>): void {
+const calls = { open: 0, close: 0 }
+
+function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<string, string>, isPlaced = true): void {
   on('env.get', () => ({ value: '/home/t' }))
   on('fs.exists', () => ({ value: true }))
   on('fs.list', () => ({
@@ -28,8 +30,16 @@ function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<strin
   on('clock.now', () => ({ value: NOW }))
   on('clock.every', () => ({ value: { cancel: () => undefined } }))
   on('command.register', (_, e) => ({ value: { command: e.name } }))
-  on('ui.open', () => ({ value: { isPlaced: true } }))
-  on('ui.close', () => ({ value: undefined }))
+  calls.open = 0
+  calls.close = 0
+  on('ui.open', () => {
+    calls.open += 1
+    return { value: { isPlaced } }
+  })
+  on('ui.close', () => {
+    calls.close += 1
+    return { value: undefined }
+  })
   on('ui.status', () => ({ value: undefined }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
 }
@@ -47,7 +57,10 @@ test('babysit-pane only prints the state and leaves the pane alone', async ($, o
   seed(on, { 'austek__dotfiles__97.json': FILE })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
+  const opensAtStart = calls.open
   const result = await $.command.run({ command: 'babysit-pane' })
+  expect(calls.open).toBe(opensAtStart)
+  expect(calls.close).toBe(0)
   expect(result.text).toContain('dotfiles#97 BLOCKED 2/3')
   expect(result.text).toContain('next: approve the drafted fix')
   expect(result.text).not.toContain('pane hidden')
@@ -91,4 +104,13 @@ test('the band shows the status and a show-pane button only while the pane is hi
   expect(await whileHidden.find({ type: 'Text', text: /babysit dotfiles#97 BLOCKED 2\/3/ })).toBeDefined()
   expect(await whileHidden.find({ type: 'Button', text: /show pane/ })).toBeDefined()
   await whileHidden.unmount()
+})
+
+test('the band stays visible when the surface does not place the pane', async ($, on) => {
+  seed(on, { 'austek__dotfiles__97.json': FILE }, false)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+
+  const ui = await band($)
+  expect(await ui.find({ type: 'Button', text: /show pane/ })).toBeDefined()
+  await ui.unmount()
 })

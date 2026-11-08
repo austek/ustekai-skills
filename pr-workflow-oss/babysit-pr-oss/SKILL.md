@@ -227,12 +227,14 @@ field). If the head changed since the gate ran, rerun §5a before merging.
 
 Status surfaces (the `babysit-pane` plugin's pane and commands, a tmux `status-right`, a status line) read one JSON
 file per watched PR, so none of them call `gh`. Write it at the end of §2 once targets resolve, after each §3 step 0, 1, 2 and 3, and on
-every §5 state change, report-only PRs included. Write `CLOSED` when the PR merges or closes. Delete nothing: readers
-drop stale files themselves.
+every §5 state change, report-only PRs included. Write `CLOSED` when the PR merges or closes. On a repo or owner
+target, also run `gh pr view` for each state file in that scope whose PR the open list omitted, and write `CLOSED`
+when GitHub reports it closed or merged. Delete nothing: readers drop stale files themselves.
 
-Path: `~/.cache/babysit-pr/<owner>__<repo>__<N>.json`. Create the directory when missing. Write
-`<name>.json.tmp` in the same directory with the Write tool, then `mv` it over `<name>.json`, so a reader never
-sees half a file.
+Path: `~/.cache/babysit-pr/<owner>__<repo>__<N>.json`, with owner and repo lower-cased (GitHub names ignore case).
+Create the directory when missing and keep it owner-only (`mkdir -p -m 700`, and `chmod 700` when it exists). Write
+`<name>.json.<random>.tmp` in the same directory with the Write tool, a fresh random suffix per write, then `mv` it
+over `<name>.json`, so a reader never sees half a file and two sessions never share a temp file.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -247,6 +249,9 @@ sees half a file.
 | `nextReviewAt` | epoch ms, optional | §3a `next_review_at`; omit when the window is open. |
 | `next` | string, optional | One line, written by this skill: what the user does next, or what it waits for. Never copy PR, comment or bot text into it. |
 | `updatedAt` | epoch ms | Time of this write. |
+
+When a read fails (§5a fail closed), write `WAITING`, keep the counts of the last write (zeros on the first write)
+and name the failing source in `next`.
 
 Notify once on a change into `READY`, `BLOCKED` or `EXHAUSTED`, never for `WAITING`, with the `PushNotification`
 tool when it is available (skip silently otherwise). The text is `<owner>/<repo>#<N> <STATE>` plus the `next` line.

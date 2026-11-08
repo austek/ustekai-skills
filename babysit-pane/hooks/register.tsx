@@ -38,9 +38,13 @@ async function refresh($: EngineInterface): Promise<number> {
 }
 
 async function setPane($: EngineInterface, shown: boolean): Promise<void> {
-  if (shown) await $.ui.open({ id: PANE, title: 'Babysit' })
-  else await $.ui.close({ id: PANE })
-  await update($, isPaneShown, () => shown)
+  if (shown) {
+    const { isPlaced } = await $.ui.open({ id: PANE, title: 'Babysit' })
+    await update($, isPaneShown, () => isPlaced)
+    return
+  }
+  await $.ui.close({ id: PANE })
+  await update($, isPaneShown, () => false)
 }
 
 async function stateText($: EngineInterface): Promise<string> {
