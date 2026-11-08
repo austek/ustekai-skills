@@ -19,6 +19,7 @@ const FILE = JSON.stringify({
 })
 
 const calls = { open: 0, close: 0 }
+const state = { placed: false }
 
 function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<string, string>, isPlaced = true): void {
   on('env.get', () => ({ value: '/home/t' }))
@@ -32,14 +33,20 @@ function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<strin
   on('command.register', (_, e) => ({ value: { command: e.name } }))
   calls.open = 0
   calls.close = 0
+  state.placed = false
   on('ui.open', () => {
     calls.open += 1
+    state.placed = isPlaced
     return { value: { isPlaced } }
   })
   on('ui.close', () => {
     calls.close += 1
+    state.placed = false
     return { value: undefined }
   })
+  on('ui.panes', () => ({
+    value: [{ id: 'babysit-pane', title: 'Babysit', isShown: true, isFocused: false, isPlaced: state.placed }],
+  }))
   on('ui.status', () => ({ value: undefined }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
 }
@@ -113,4 +120,18 @@ test('the band stays visible when the surface does not place the pane', async ($
   const ui = await band($)
   expect(await ui.find({ type: 'Button', text: /show pane/ })).toBeDefined()
   await ui.unmount()
+})
+
+test('a pane placed later is picked up, so the toggle hides it', async ($, on) => {
+  seed(on, { 'austek__dotfiles__97.json': FILE }, false)
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine band</Text>
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+
+  state.placed = true
+  const result = await $.command.run({ command: 'babysit-panel' })
+  expect(result.text).toContain('Babysit pane hidden')
+  expect(calls.close).toBe(1)
 })

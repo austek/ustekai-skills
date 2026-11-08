@@ -43,6 +43,7 @@ function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<strin
   on('clock.every', () => ({ value: { cancel: () => undefined } }))
   on('command.register', () => ({ value: { command: 'babysit' } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('ui.panes', () => ({ value: [] }))
   on('ui.status', () => ({ value: undefined }))
   on('session.start', (_, e) => ({ cwd: e.cwd }))
 }

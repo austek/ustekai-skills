@@ -30,21 +30,23 @@ async function readEntries($: EngineInterface): Promise<Entry[]> {
   return texts.flatMap(raw => (typeof raw === 'string' ? [parseEntry(raw)] : [])).filter(e => e !== undefined)
 }
 
+async function syncPane($: EngineInterface): Promise<void> {
+  const pane = (await $.ui.panes()).find(p => p.id === PANE)
+  await update($, isPaneShown, () => pane?.isPlaced === true)
+}
+
 async function refresh($: EngineInterface): Promise<number> {
   const now = await $.clock.now()
   const shown = visible(await readEntries($), now)
   await update($, entries, () => shown)
+  await syncPane($)
   return shown.length
 }
 
 async function setPane($: EngineInterface, shown: boolean): Promise<void> {
-  if (shown) {
-    const { isPlaced } = await $.ui.open({ id: PANE, title: 'Babysit' })
-    await update($, isPaneShown, () => isPlaced)
-    return
-  }
-  await $.ui.close({ id: PANE })
-  await update($, isPaneShown, () => false)
+  if (shown) await $.ui.open({ id: PANE, title: 'Babysit' })
+  else await $.ui.close({ id: PANE })
+  await syncPane($)
 }
 
 async function stateText($: EngineInterface): Promise<string> {
@@ -71,6 +73,7 @@ export const register: Register = on => {
 
   on('command.run', { command: TOGGLE_COMMAND }, async ($, e) => {
     const arg = e.args?.trim()
+    await syncPane($)
     const closing = arg === 'close' || (arg !== 'open' && (await read($, isPaneShown)))
     await setPane($, !closing)
 
@@ -106,8 +109,8 @@ export const register: Register = on => {
             <Text color={COLOR[entry.state]} weight="bold">
               {titleOf(entry)}
             </Text>
-            {detailOf(entry, now).map(row => (
-              <Text dimColor>{row}</Text>
+            {detailOf(entry, now).map((row, i) => (
+              <Text key={i} dimColor>{row}</Text>
             ))}
           </Box>
         ))}
