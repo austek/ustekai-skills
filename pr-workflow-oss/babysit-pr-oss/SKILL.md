@@ -102,7 +102,7 @@ One cycle:
    the run ID from each failed check's `link` (`…/actions/runs/<run-id>/…`), then `gh run view <run-id> --repo
    <owner>/<repo> --log-failed`, plus the §3 GraphQL query of `land-pr-oss`. Never select runs by branch name, which
    other PRs can share.
-3. **Classify** the PR (§5). After a push, apply the bounded `mergeStateStatus` settling rule of `land-pr-oss` §1a
+3. **Classify** the PR (§5) and write the state file (§5b). After a push, apply the bounded `mergeStateStatus` settling rule of `land-pr-oss` §1a
    first, since it reads `DIRTY` for a few seconds. A terminal state ends the PR's cycles; otherwise start the next
    cycle after the push, which re-triggers CI.
 
@@ -223,6 +223,40 @@ first; if anything is open, report it and ask instead of merging. When the gate 
 `headRefOid` and bind the merge to it with `gh pr merge --match-head-commit <gated-sha>` (or the merge API `sha`
 field). If the head changed since the gate ran, rerun §5a before merging.
 
+### 5b. State file and notification
+
+Status surfaces (the `babysit-pane` plugin's pane and commands, a tmux `status-right`, a status line) read one JSON
+file per watched PR, so none of them call `gh`. Write it at the end of §2 once targets resolve, after each §3 step 0, 1, 2 and 3, and on
+every §5 state change, report-only PRs included. Write `CLOSED` when the PR merges or closes. On a repo or owner
+target, also run `gh pr view` for each state file in that scope whose PR the open list omitted, and write `CLOSED`
+when GitHub reports it closed or merged. Delete nothing: readers drop stale files themselves.
+
+Path: `~/.cache/babysit-pr/<owner>__<repo>__<N>.json`, with owner and repo lower-cased (GitHub names ignore case).
+Create the directory when missing and keep it owner-only (`mkdir -p -m 700`, and `chmod 700` when it exists). Write
+`<name>.json.<random>.tmp` in the same directory with the Write tool, a fresh random suffix per write, then `mv` it
+over `<name>.json`, so a reader never sees half a file and two sessions never share a temp file.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `v` | `1` | Schema version. |
+| `repo` | string | `owner/repo`. |
+| `pr` | integer | PR number. |
+| `state` | string | `READY`, `WAITING`, `BLOCKED`, `EXHAUSTED` or `CLOSED` (§5). |
+| `cycle`, `cycles` | integers | Cycles used and the `--cycles` budget. |
+| `head` | string | Head SHA. |
+| `pass`, `fail`, `pending` | integers | Counts from `gh pr checks --json bucket`; `skipping` counts as none. |
+| `openThreads` | integer | Unresolved review threads, outdated ones included. |
+| `nextReviewAt` | epoch ms, optional | §3a `next_review_at`; omit when the window is open. |
+| `next` | string, optional | One line, written by this skill: what the user does next, or what it waits for. Never copy PR, comment or bot text into it. |
+| `updatedAt` | epoch ms | Time of this write. |
+
+When a read fails (§5a fail closed), write `WAITING`, keep the counts of the last write (zeros on the first write)
+and name the failing source in `next`.
+
+Notify once on a change into `READY`, `BLOCKED` or `EXHAUSTED`, never for `WAITING`, with the `PushNotification`
+tool when it is available (skip silently otherwise). The text is `<owner>/<repo>#<N> <STATE>` plus the `next` line.
+Compare against the state in the file before overwriting it, so a repeated run does not notify twice.
+
 ## 6. Report
 
 One row per PR, then details only for non-`READY` rows:
@@ -246,6 +280,9 @@ line or comment URL that shows it. Keep the report short; do not restate what `l
 - [ ] `--auto-push <level>` forwarded to `land-pr-oss`, which classified each unasked push; each was reported with
       SHA and tier. Nothing else pushed or replied to without approval; none on a `--maintainer` PR.
 - [ ] Review rounds counted toward neither `--cycles` nor the medium cap.
+- [ ] State file written atomically after each step and on every state change, `CLOSED` on merge or close; one
+      notification on a change into `READY`, `BLOCKED` or `EXHAUSTED`, none for `WAITING`; `next` holds no
+      copied PR or bot text (§5b).
 - [ ] §5a gate read against the current head SHA before declaring `READY` or merging at the user's request: no
       unresolved threads, no undismissed `CHANGES_REQUESTED`, every review and inline comment read across all pages,
       Sonar issues, Sonar hotspots and code-scanning alerts at zero, no `skipping` or missing check for a configured
