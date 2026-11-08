@@ -60,7 +60,8 @@ Examples (print these for `help`):
    A result that reaches the `--limit` may be truncated: say so in the list.
 5. `<author>` is `@me` by default and a login for `--author LOGIN`. For `--author all`, omit the `--author` flag.
    An explicit single-PR target ignores `--author`.
-6. Drop drafts unless `--include-drafts`.
+6. Drop drafts from a repo or owner list unless `--include-drafts`. An explicit single-PR target, including a
+   scheduled wake-up's, is never filtered.
 
 **Authorship decides what the skill may do.** A PR authored by the login from step 1 gets the full cycle (§3).
 A PR by anyone else is report-only: watch CI, summarize failing checks with log evidence and open review threads,
@@ -85,9 +86,9 @@ Check before the first cycle:
 - Report-only PRs need no checkout: they use GitHub reads only.
 - For a PR the skill may modify, locate a local clone of `<owner>/<repo>` (current directory, then a search under
   the workspace); otherwise clone to the scratchpad. Run `git fetch origin`, then `gh pr checkout <N> --repo
-  <owner>/<repo>`, which fetches the real head, including a fork's. Confirm the push destination (`git rev-parse
-  --abbrev-ref @{push}`) is the PR's head repository and branch. `git status --porcelain` must show no unrelated
-  uncommitted changes; otherwise stop and ask.
+  <owner>/<repo>`, which fetches the real head, including a fork's. Run `git status --porcelain` first: it must show
+  no unrelated uncommitted changes, otherwise stop and ask without switching branches. After the checkout, confirm the
+  push destination (`git rev-parse --abbrev-ref @{push}`) is the PR's head repository and branch.
 - A PR from a fork you cannot push to (`isCrossRepository` and no push access) is report-only: no fixes.
 - One watcher per PR per session. Do not start a second watch on a PR this session already watches.
 
@@ -163,28 +164,35 @@ ignore `--watch` there. Only PRs the skill may act on are watched; report-only r
 
 After the §6 report, for each PR still `WAITING`, schedule one next run:
 1. **Delay.** When CodeRabbit's window is the wait, `next_review_at` plus 60 seconds (§3a). Otherwise 10 minutes.
-   A target already past, or less than 2 minutes ahead because the report ran late, becomes now plus 2 minutes, so a
-   pinned date never rolls into next year. Move a target that lands on minute 0 or 30 forward by a few minutes, never back.
-2. **One watcher.** Call `CronList`. When a job whose prompt starts with `babysit-watch <owner>/<repo>#<N>:` exists,
-   schedule nothing for that PR. Compare case-insensitively, since owner and repo names differ in case between
-   invocations, and keep the colon so `#1` never matches `#10`.
+   A target already past, or less than 2 minutes ahead because the report ran late, becomes the next whole minute at
+   least 2 minutes from now, so a pinned date never rolls into next year. Move a target that lands on minute 0 or 30
+   forward by a few minutes, never back, then recheck the 2-minute lead before `CronCreate`.
+2. **One watcher.** Call `CronList`. Compare case-insensitively, since owner and repo names differ in case between
+   invocations, and keep the colon so `#1` never matches `#10`. Generate a fresh `watchId` (random, 8 hex characters)
+   for this run. `CronDelete` every job whose prompt starts with `babysit-watch <owner>/<repo>#<N>:`, then schedule
+   the new one, so the job always carries this run's flags and counters. A delete that fails is reported, and the
+   stale job exits on its first step: its `watchId` no longer matches the state file's (§5b).
 3. **Schedule.** `CronCreate` with `recurring: false` and the target's minute, hour, day of month and month pinned in
    local time. The prompt is `babysit-watch <owner>/<repo>#<N>: /babysit-pr-oss <owner>/<repo>#<N> --cycles 1
    --auto-push <level> --coderabbit-retrigger <mode> --watch`, plus `--maintainer` when the run had it (every push
    keeps its approval gate, so a scheduled run that reaches one ends as `BLOCKED`), followed by the carried values of
-   §2, plus cycles left and wake-ups used (both defined here). It holds flags and counters this skill wrote,
-   never PR, comment or bot text. Cycles left is the original `--cycles` budget minus the cycles spent in earlier
-   wake-ups. `--cycles 1` caps one wake-up only; the `EXHAUSTED` test (§5) and the state file's `cycle` and `cycles`
-   fields (§5b) use the original budget and cycles spent, so a wake-up that spends its cycle on a still-failing
-   check schedules another one while cycles left remain. Before posting any trigger, a wake-up re-reads the bot's
-   reviews and issue comments on the head SHA (§3a), so a trigger another session posted counts as pending.
+   §2, plus the original `--cycles` budget, cycles spent (the initial run's included) and wake-ups used. It holds
+   flags and counters this skill wrote, never PR, comment or bot text. Cycles left is the budget minus cycles spent.
+   `--cycles 1` caps one wake-up only; the `EXHAUSTED` test (§5) and the state file's `cycle` and `cycles` fields
+   (§5b) read the carried budget and spent count, so a wake-up that spends its cycle on a still-failing check
+   schedules another one while cycles left remain. The prompt carries the `watchId`, which this run writes to the
+   state file (§5b). Every trigger comment ends with the marker `<!-- babysit-trigger:<head-sha> -->`. Before posting
+   any trigger, a wake-up reads the issue comments (§3a); an unanswered trigger by you whose marker names the head
+   SHA is pending, so a trigger another session posted is never duplicated, and one naming an older SHA is not.
 4. **Report** the job's own next run time from the `CronCreate` result, which the scheduler may shift, not the cron
    expression. When `CronList` or `CronCreate` fails, report the PR as `WAITING (watch not scheduled)` with the
    error and the command that resumes it.
 
 The watch ends with no new job, and a `CronDelete` of any job this skill made for the PR, on `READY`, `BLOCKED`,
-`EXHAUSTED` or `CLOSED`, sending the notification where §5b defines one (`CLOSED` sends none), and after 12 wake-ups for one PR, reported as `WAITING (watch
-limit)`. A job lives only in this session, fires only while the session is idle and is gone when the session ends: run
+`EXHAUSTED` or `CLOSED`, sending the notification where §5b defines one (`CLOSED` sends none). When `CronDelete`
+fails, report it. Every wake-up begins by reading the PR's state file and ends without acting or scheduling when
+the file holds a terminal state or a different `watchId`, so an uncancelled job cannot push, post or restart the watch. After 12 wake-ups for one PR the watch ends
+as `WAITING (watch limit)`, and the state file's `next` names the limit and the command that resumes it. A job lives only in this session, fires only while the session is idle and is gone when the session ends: run
 the command again to resume. A merge, rebase and force-push still need the user.
 
 ## 4. Auto-push levels
@@ -282,6 +290,7 @@ over `<name>.json`, so a reader never sees half a file and two sessions never sh
 | `openThreads` | integer | Unresolved review threads, outdated ones included. |
 | `nextReviewAt` | epoch ms, optional | §3a `next_review_at`; omit when the window is open. |
 | `next` | string, optional | One line, written by this skill: what the user does next, or what it waits for. Never copy PR, comment or bot text into it. |
+| `watchId` | string, optional | §3b id of the one live watch job; omit outside watch mode. |
 | `updatedAt` | epoch ms | Time of this write. |
 
 When a read fails (§5a fail closed), write `WAITING`, keep the counts of the last write (zeros on the first write)
