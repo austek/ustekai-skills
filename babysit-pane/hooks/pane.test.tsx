@@ -38,6 +38,7 @@ function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<strin
   on('fs.list', () => ({
     value: Object.keys(files).map(name => ({ name, kind: 'file', size: 1, mtimeMs, isLink: false })),
   }))
+  on('fs.stat', () => ({ value: { kind: 'file', size: 1, mtimeMs } }))
   on('fs.read', (_, e) => ({ value: files[e.path.split('/').at(-1) ?? ''] ?? '' }))
   on('clock.now', () => ({ value: NOW }))
   on('clock.every', () => ({ value: { cancel: () => undefined } }))
@@ -68,6 +69,16 @@ test('a future updatedAt is capped at the file mtime, so the pane shows the real
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect(await ui.find({ type: 'Text', text: /updated 3h ago/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /clock skew/ })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('a WAITING entry with a future updatedAt and a stale mtime is hidden', async ($, on) => {
+  const waiting = JSON.stringify({ ...JSON.parse(FILE), state: 'WAITING', updatedAt: NOW + 92 * 3_600_000 })
+  seed(on, { 'austek__dotfiles__97.json': waiting }, NOW - 3 * 3_600_000)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await ui.find({ type: 'Text' }))?.text).toBe('No PR is being watched.')
   await ui.unmount()
 })
 

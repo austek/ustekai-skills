@@ -1,6 +1,6 @@
 {
   "name": "babysit-pane",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "author": { "name": "austek" },
   "description": "A pane and status entry showing the state of the PRs babysit-pr-oss is watching, read from ~/.cache/babysit-pr.",
   "types": "./types/index.d.ts"

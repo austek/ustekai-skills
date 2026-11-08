@@ -30,7 +30,10 @@ async function readEntries($: EngineInterface): Promise<Entry[]> {
     names.map(async f => {
       const raw = await $.fs.read(`${dir}/${f.name}`).catch(() => '')
       const entry = typeof raw === 'string' ? parseEntry(raw) : undefined
-      return entry === undefined ? undefined : { ...entry, updatedAt: Math.min(entry.updatedAt, f.mtimeMs) }
+      if (entry === undefined) return undefined
+      // Stat after the read: a file replaced in between can only make the mtime newer than the contents, which the cap tolerates.
+      const stat = await $.fs.stat(`${dir}/${f.name}`).catch(() => undefined)
+      return stat === undefined ? undefined : { ...entry, updatedAt: Math.min(entry.updatedAt, stat.mtimeMs) }
     }),
   )
   return parsed.filter(e => e !== undefined)
