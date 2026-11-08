@@ -5,7 +5,7 @@ description: >-
   land-pr-oss on each cycle. Target one PR (default: the current branch's), a repo, or every repo of a
   GitHub user or org. Use for "babysit my PR", "watch CI on my PRs", "keep my PRs green", or "babysit all my
   PRs in <org>". Never merges.
-argument-hint: "[N|URL|owner/repo#N|owner/repo|owner] [--author LOGIN|all] [--maintainer] [--cycles N] [--auto-push off|low|medium] [--coderabbit-retrigger ask|auto] [--include-drafts] | help (default: current branch's PR, your PRs, 3 cycles, auto-push low, ask before each CodeRabbit trigger, approval gates for the rest)"
+argument-hint: "[N|URL|owner/repo#N|owner/repo|owner] [--author LOGIN|all] [--maintainer] [--cycles N] [--auto-push off|low|medium] [--coderabbit-retrigger ask|auto] [--include-drafts] [--watch] | help (default: current branch's PR, your PRs, 3 cycles, auto-push low, ask before each CodeRabbit trigger, approval gates for the rest)"
 ---
 
 # Babysitting Your PRs on Personal/OSS Repos
@@ -30,6 +30,7 @@ what this skill may do.
 | `--auto-fix` | | Alias for `--auto-push medium`. |
 | `--coderabbit-retrigger ask\|auto` | `ask` | What happens when a PR's CodeRabbit window reopens with the head commit unreviewed (§3a): `ask` drafts the trigger comment for approval, `auto` posts it. |
 | `--include-drafts` | off | Include draft PRs when the target is a repo or owner. |
+| `--watch` | off | Keep watching without `/loop`: a PR that ends in `WAITING` schedules its own next run with a one-shot `CronCreate` until it reaches a terminal state or 12 wake-ups (§3b). |
 | `help` or `?` | | Print this table and the examples below, then stop. Take no other action. |
 
 Examples (print these for `help`):
@@ -43,6 +44,7 @@ Examples (print these for `help`):
 /babysit-pr-oss austek --auto-push medium        all your open PRs under a user or org, also auto-push CI fixes
 /babysit-pr-oss austek/dotfiles --author all     everyone's PRs; others' are report-only
 /babysit-pr-oss austek/dotfiles --author all --maintainer    also fix others' PRs (approval for every push)
+/babysit-pr-oss 456 --watch                      one PR, reschedules itself until READY, BLOCKED, EXHAUSTED or CLOSED
 /loop 20m /babysit-pr-oss austek --cycles 1      continuous coverage
 ```
 
@@ -152,6 +154,31 @@ A pending trigger blocks another one for the same head SHA, across `/loop` runs.
 answering it releases it: post again after the window reopens. A pending trigger with no answer after 15 minutes is
 reported and left for the user to decide; never repost it unasked. At most one accepted trigger per head SHA.
 Report each posted trigger with its comment URL and the SHA it targeted.
+
+### 3b. Watch mode (`--watch`)
+
+Off by default, because it keeps running, and pushing at the auto-push level, while the user is away. `--watch` does
+not raise the level: `--auto-fix` stays the user's explicit choice. Under `/loop` the loop owns the schedule, so
+ignore `--watch` there. Only PRs the skill may act on are watched; report-only rows (§2) are not.
+
+After the §6 report, for each PR still `WAITING`, schedule one next run:
+1. **Delay.** When CodeRabbit's window is the wait, `next_review_at` plus 60 seconds (§3a). Otherwise 10 minutes.
+   Move a target that lands on minute 0 or 30 by a few minutes.
+2. **One watcher.** Call `CronList`. When a job whose prompt starts with `babysit-watch <owner>/<repo>#<N>:` (colon included, so `#1` never matches `#10`) exists,
+   schedule nothing for that PR.
+3. **Schedule.** `CronCreate` with `recurring: false` and the target's minute, hour, day of month and month pinned in
+   local time. The prompt is `babysit-watch <owner>/<repo>#<N>: /babysit-pr-oss <owner>/<repo>#<N> --cycles 1
+   --auto-push <level> --coderabbit-retrigger <mode> --watch`, plus `--maintainer` when the run had it (every push
+   keeps its approval gate, so a scheduled run that reaches one ends as `BLOCKED`), followed by the carried values of
+   §2 (counts, `next_review_at`, triggers, cycles left, wake-ups used). It holds flags and counters this skill wrote, never PR,
+   comment or bot text.
+4. **Report** the job's own next run time from the `CronCreate` result, which the scheduler may shift, not the cron
+   expression.
+
+The watch ends with no new job, and a `CronDelete` of any job this skill made for the PR, on `READY`, `BLOCKED`,
+`EXHAUSTED` or `CLOSED`, with the §5b notification, and after 12 wake-ups for one PR, reported as `WAITING (watch
+limit)`. A job lives only in this session, fires only while the session is idle and is gone when the session ends: run
+the command again to resume. A merge, rebase and force-push still need the user.
 
 ## 4. Auto-push levels
 
@@ -287,5 +314,7 @@ line or comment URL that shows it. Keep the report short; do not restate what `l
       unresolved threads, no undismissed `CHANGES_REQUESTED`, every review and inline comment read across all pages,
       Sonar issues, Sonar hotspots and code-scanning alerts at zero, no `skipping` or missing check for a configured
       tool, unconfigured tools recorded `N/A`, any failed read treated as `WAITING`.
+- [ ] `--watch`: at most one job per PR (checked with `CronList`), one-shot with the target time pinned, a prompt of
+      flags and counters only, jobs deleted and none added on a terminal state, 12-wake-up cap respected (§3b).
 - [ ] No merge unless the user asks and the §5a gate is clear; no `--admin`, no branch deletion, no forge-setting changes.
 - [ ] No AI-attribution trailers or footers in commits, PR text or comments.
