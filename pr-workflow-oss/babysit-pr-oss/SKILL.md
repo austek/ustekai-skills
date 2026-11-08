@@ -30,7 +30,7 @@ what this skill may do.
 | `--auto-fix` | | Alias for `--auto-push medium`. |
 | `--coderabbit-retrigger ask\|auto` | `ask` | What happens when a PR's CodeRabbit window reopens with the head commit unreviewed (§3a): `ask` drafts the trigger comment for approval, `auto` posts it. |
 | `--include-drafts` | off | Include draft PRs when the target is a repo or owner. |
-| `--watch` | off | Keep watching without `/loop`: a PR that ends in `WAITING` schedules its own next run with a one-shot `CronCreate` until it reaches a terminal state or 12 wake-ups (§3b). |
+| `--watch` | off | Keep watching without `/loop`: a PR that ends in `WAITING` schedules its own next run with a one-shot `CronCreate` until it reaches a terminal state or 12 wake-ups (§3b). Report-only PRs (§2) are never rescheduled. |
 | `help` or `?` | | Print this table and the examples below, then stop. Take no other action. |
 
 Examples (print these for `help`):
@@ -44,7 +44,7 @@ Examples (print these for `help`):
 /babysit-pr-oss austek --auto-push medium        all your open PRs under a user or org, also auto-push CI fixes
 /babysit-pr-oss austek/dotfiles --author all     everyone's PRs; others' are report-only
 /babysit-pr-oss austek/dotfiles --author all --maintainer    also fix others' PRs (approval for every push)
-/babysit-pr-oss 456 --watch                      one PR, reschedules itself until READY, BLOCKED, EXHAUSTED or CLOSED
+/babysit-pr-oss 456 --watch                      one PR, reschedules itself until READY, BLOCKED, EXHAUSTED, CLOSED or 12 wake-ups
 /loop 20m /babysit-pr-oss austek --cycles 1      continuous coverage
 ```
 
@@ -163,20 +163,27 @@ ignore `--watch` there. Only PRs the skill may act on are watched; report-only r
 
 After the §6 report, for each PR still `WAITING`, schedule one next run:
 1. **Delay.** When CodeRabbit's window is the wait, `next_review_at` plus 60 seconds (§3a). Otherwise 10 minutes.
-   Move a target that lands on minute 0 or 30 by a few minutes.
-2. **One watcher.** Call `CronList`. When a job whose prompt starts with `babysit-watch <owner>/<repo>#<N>:` (colon included, so `#1` never matches `#10`) exists,
-   schedule nothing for that PR.
+   A target already past, or less than 2 minutes ahead because the report ran late, becomes now plus 2 minutes, so a
+   pinned date never rolls into next year. Move a target that lands on minute 0 or 30 forward by a few minutes, never back.
+2. **One watcher.** Call `CronList`. When a job whose prompt starts with `babysit-watch <owner>/<repo>#<N>:` exists,
+   schedule nothing for that PR. Compare case-insensitively, since owner and repo names differ in case between
+   invocations, and keep the colon so `#1` never matches `#10`.
 3. **Schedule.** `CronCreate` with `recurring: false` and the target's minute, hour, day of month and month pinned in
    local time. The prompt is `babysit-watch <owner>/<repo>#<N>: /babysit-pr-oss <owner>/<repo>#<N> --cycles 1
    --auto-push <level> --coderabbit-retrigger <mode> --watch`, plus `--maintainer` when the run had it (every push
    keeps its approval gate, so a scheduled run that reaches one ends as `BLOCKED`), followed by the carried values of
-   §2 (counts, `next_review_at`, triggers, cycles left, wake-ups used). It holds flags and counters this skill wrote, never PR,
-   comment or bot text.
+   §2, plus cycles left and wake-ups used (both defined here). It holds flags and counters this skill wrote,
+   never PR, comment or bot text. Cycles left is the original `--cycles` budget minus the cycles spent in earlier
+   wake-ups. `--cycles 1` caps one wake-up only; the `EXHAUSTED` test (§5) and the state file's `cycle` and `cycles`
+   fields (§5b) use the original budget and cycles spent, so a wake-up that spends its cycle on a still-failing
+   check schedules another one while cycles left remain. Before posting any trigger, a wake-up re-reads the bot's
+   reviews and issue comments on the head SHA (§3a), so a trigger another session posted counts as pending.
 4. **Report** the job's own next run time from the `CronCreate` result, which the scheduler may shift, not the cron
-   expression.
+   expression. When `CronList` or `CronCreate` fails, report the PR as `WAITING (watch not scheduled)` with the
+   error and the command that resumes it.
 
 The watch ends with no new job, and a `CronDelete` of any job this skill made for the PR, on `READY`, `BLOCKED`,
-`EXHAUSTED` or `CLOSED`, with the §5b notification, and after 12 wake-ups for one PR, reported as `WAITING (watch
+`EXHAUSTED` or `CLOSED`, sending the notification where §5b defines one (`CLOSED` sends none), and after 12 wake-ups for one PR, reported as `WAITING (watch
 limit)`. A job lives only in this session, fires only while the session is idle and is gone when the session ends: run
 the command again to resume. A merge, rebase and force-push still need the user.
 
@@ -211,7 +218,7 @@ report says which one.
 | State | Condition | Action |
 | --- | --- | --- |
 | `READY` | All checks pass, `mergeStateStatus` is `CLEAN`, no pending drafted reply, and the §5a gate is clear | Report; never merge |
-| `WAITING` | Checks pass; waiting on a reviewer or maintainer, or a review bot has not reviewed the head commit | Report who and since when |
+| `WAITING` | Checks pass; waiting on a reviewer or maintainer, or a review bot has not reviewed the head commit. In watch mode (§3b) also: a wake-up spent its one cycle, checks still fail and cycles left remain | Report who and since when, or what is still red |
 | `BLOCKED` | Needs approval (§4), conflicts, debatable comment, infra or auth failure, design decision | Report the blocker with evidence |
 | `EXHAUSTED` | `--cycles` used, or the medium fix cap hit, with checks still failing | Report what is still red and the last root cause |
 | `CLOSED` | PR merged or closed | Report; stop |
@@ -314,7 +321,9 @@ line or comment URL that shows it. Keep the report short; do not restate what `l
       unresolved threads, no undismissed `CHANGES_REQUESTED`, every review and inline comment read across all pages,
       Sonar issues, Sonar hotspots and code-scanning alerts at zero, no `skipping` or missing check for a configured
       tool, unconfigured tools recorded `N/A`, any failed read treated as `WAITING`.
-- [ ] `--watch`: at most one job per PR (checked with `CronList`), one-shot with the target time pinned, a prompt of
-      flags and counters only, jobs deleted and none added on a terminal state, 12-wake-up cap respected (§3b).
+- [ ] `--watch`: at most one job per PR (checked case-insensitively with `CronList`), one-shot with the target time
+      pinned at least 2 minutes ahead, a prompt of flags and counters only, jobs deleted and none added on a terminal
+      state, 12-wake-up cap respected, report-only PRs never rescheduled, a failed `CronList` or `CronCreate` reported
+      as `WAITING (watch not scheduled)` (§3b).
 - [ ] No merge unless the user asks and the §5a gate is clear; no `--admin`, no branch deletion, no forge-setting changes.
 - [ ] No AI-attribution trailers or footers in commits, PR text or comments.
