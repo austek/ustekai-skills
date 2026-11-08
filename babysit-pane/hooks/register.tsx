@@ -26,8 +26,17 @@ async function readEntries($: EngineInterface): Promise<Entry[]> {
   const dir = `${home}/${STATE_DIR}`
   if (!(await $.fs.exists(dir))) return []
   const names = (await $.fs.list(dir)).filter(f => f.kind === 'file' && f.name.endsWith('.json'))
-  const texts = await Promise.all(names.map(f => $.fs.read(`${dir}/${f.name}`).catch(() => '')))
-  return texts.flatMap(raw => (typeof raw === 'string' ? [parseEntry(raw)] : [])).filter(e => e !== undefined)
+  const parsed = await Promise.all(
+    names.map(async f => {
+      const raw = await $.fs.read(`${dir}/${f.name}`).catch(() => '')
+      const entry = typeof raw === 'string' ? parseEntry(raw) : undefined
+      if (entry === undefined) return undefined
+      // Stat after the read: a file replaced in between can only make the mtime newer than the contents, which the cap tolerates.
+      const stat = await $.fs.stat(`${dir}/${f.name}`).catch(() => undefined)
+      return stat === undefined ? undefined : { ...entry, updatedAt: Math.min(entry.updatedAt, stat.mtimeMs) }
+    }),
+  )
+  return parsed.filter(e => e !== undefined)
 }
 
 async function syncPane($: EngineInterface): Promise<void> {

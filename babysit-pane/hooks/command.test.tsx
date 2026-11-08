@@ -27,6 +27,7 @@ function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<strin
   on('fs.list', () => ({
     value: Object.keys(files).map(name => ({ name, kind: 'file', size: 1, mtimeMs: NOW, isLink: false })),
   }))
+  on('fs.stat', () => ({ value: { kind: 'file', size: 1, mtimeMs: NOW } }))
   on('fs.read', (_, e) => ({ value: files[e.path.split('/').at(-1) ?? ''] ?? '' }))
   on('clock.now', () => ({ value: NOW }))
   on('clock.every', () => ({ value: { cancel: () => undefined } }))
