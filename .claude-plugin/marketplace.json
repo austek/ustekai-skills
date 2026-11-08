@@ -25,7 +25,7 @@
     {
       "name": "pr-workflow-oss",
       "description": "Open, review, land, and babysit pull requests on personal or open-source repos.",
-      "version": "1.9.0",
+      "version": "1.10.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
@@ -33,6 +33,17 @@
       "category": "productivity",
       "source": "./pr-workflow-oss",
       "skills": ["./create-pr-oss", "./review-pr-oss", "./review-comprehension", "./land-pr-oss", "./babysit-pr-oss"]
+    },
+    {
+      "name": "babysit-pane",
+      "description": "A Claude Code pane, band and commands showing the state of the PRs babysit-pr-oss watches, read from ~/.cache/babysit-pr.",
+      "version": "0.1.0",
+      "author": { "name": "austek" },
+      "homepage": "https://github.com/austek/ustekai-skills",
+      "repository": "https://github.com/austek/ustekai-skills",
+      "license": "MIT",
+      "category": "productivity",
+      "source": "./babysit-pane"
     },
     {
       "name": "architecture",
