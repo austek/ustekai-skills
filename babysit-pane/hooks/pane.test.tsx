@@ -32,11 +32,11 @@ const FILE = JSON.stringify({
   updatedAt: NOW - 60_000,
 })
 
-function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<string, string>): void {
+function seed(on: Parameters<Parameters<typeof test>[1]>[1], files: Record<string, string>, mtimeMs = NOW): void {
   on('env.get', () => ({ value: '/home/t' }))
   on('fs.exists', () => ({ value: true }))
   on('fs.list', () => ({
-    value: Object.keys(files).map(name => ({ name, kind: 'file', size: 1, mtimeMs: NOW, isLink: false })),
+    value: Object.keys(files).map(name => ({ name, kind: 'file', size: 1, mtimeMs, isLink: false })),
   }))
   on('fs.read', (_, e) => ({ value: files[e.path.split('/').at(-1) ?? ''] ?? '' }))
   on('clock.now', () => ({ value: NOW }))
@@ -58,6 +58,17 @@ test('the pane lists a watched PR with its state and detail, on every surface', 
     expect(await ui.find({ type: 'Text', text: /next: approve the drafted fix/ })).toBeDefined()
     await ui.unmount()
   }
+})
+
+test('a future updatedAt is capped at the file mtime, so the pane shows the real age', async ($, on) => {
+  const future = JSON.stringify({ ...JSON.parse(FILE), updatedAt: NOW + 92 * 3_600_000 })
+  seed(on, { 'austek__dotfiles__97.json': future }, NOW - 3 * 3_600_000)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /updated 3h ago/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /clock skew/ })).toBeUndefined()
+  await ui.unmount()
 })
 
 test('with no state files the pane says nothing is watched', async ($, on) => {

@@ -5,6 +5,8 @@ export const STATE_DIR = '.cache/babysit-pr'
 
 const HOUR_MS = 3_600_000
 const STALE_MS = 24 * HOUR_MS
+// A live watcher rewrites a WAITING file at least every 10 minutes, so two hours of silence means it died.
+const SILENT_MS = 2 * HOUR_MS
 const ORDER: readonly BabysitState[] = ['BLOCKED', 'EXHAUSTED', 'WAITING', 'READY', 'CLOSED']
 
 const isState = (value: unknown): value is BabysitState =>
@@ -52,8 +54,15 @@ export function parseEntry(raw: string): Entry | undefined {
   return valid && isState(o.state) ? entryOf(o, o.state) : undefined
 }
 
-const isFresh = (e: Entry, now: number): boolean =>
-  now - e.updatedAt < STALE_MS && (e.state !== 'CLOSED' || now - e.updatedAt < HOUR_MS)
+const LIFETIME_MS: Readonly<Record<BabysitState, number>> = {
+  BLOCKED: STALE_MS,
+  EXHAUSTED: STALE_MS,
+  READY: STALE_MS,
+  WAITING: SILENT_MS,
+  CLOSED: HOUR_MS,
+}
+
+const isFresh = (e: Entry, now: number): boolean => now - e.updatedAt < LIFETIME_MS[e.state]
 
 const rank = (e: Entry): number => ORDER.indexOf(e.state)
 

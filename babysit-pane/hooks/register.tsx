@@ -26,8 +26,14 @@ async function readEntries($: EngineInterface): Promise<Entry[]> {
   const dir = `${home}/${STATE_DIR}`
   if (!(await $.fs.exists(dir))) return []
   const names = (await $.fs.list(dir)).filter(f => f.kind === 'file' && f.name.endsWith('.json'))
-  const texts = await Promise.all(names.map(f => $.fs.read(`${dir}/${f.name}`).catch(() => '')))
-  return texts.flatMap(raw => (typeof raw === 'string' ? [parseEntry(raw)] : [])).filter(e => e !== undefined)
+  const parsed = await Promise.all(
+    names.map(async f => {
+      const raw = await $.fs.read(`${dir}/${f.name}`).catch(() => '')
+      const entry = typeof raw === 'string' ? parseEntry(raw) : undefined
+      return entry === undefined ? undefined : { ...entry, updatedAt: Math.min(entry.updatedAt, f.mtimeMs) }
+    }),
+  )
+  return parsed.filter(e => e !== undefined)
 }
 
 async function syncPane($: EngineInterface): Promise<void> {

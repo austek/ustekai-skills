@@ -82,6 +82,16 @@ test('the detail rows carry checks, threads, the window and the next step', () =
   ])
 })
 
+test('a WAITING entry nobody has written for two hours has a dead watcher and is dropped', () => {
+  const list = [
+    entry({ pr: 1, state: 'WAITING', updatedAt: NOW - 119 * MIN }),
+    entry({ pr: 2, state: 'WAITING', updatedAt: NOW - 120 * MIN }),
+    entry({ pr: 3, state: 'BLOCKED', updatedAt: NOW - 600 * MIN }),
+    entry({ pr: 4, state: 'READY', updatedAt: NOW - 600 * MIN }),
+  ]
+  expect(visible(list, NOW).map(e => e.pr)).toEqual([3, 1, 4])
+})
+
 test('the age reads in minutes then hours, and a future timestamp reads as clock skew', () => {
   expect(ageText(NOW, NOW)).toBe('updated now')
   expect(ageText(NOW - 59 * MIN, NOW)).toBe('updated 59m ago')
