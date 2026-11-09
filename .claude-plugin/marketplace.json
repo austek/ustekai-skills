@@ -72,7 +72,7 @@
     {
       "name": "dev-utilities",
       "description": "IDE MCP tool selection, comment cleanup, code-claim verification, business analysis, HTML diff explanations, remote Claude sessions, budgeted repo audits.",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
