@@ -73,6 +73,14 @@ sd_quote() {
   printf '"%s"' "$s"
 }
 
+find_pane_loop() {
+  local loop
+  for loop in "$(command -v claude-pane-loop || true)" "$HOME/.dotfiles/bin/claude-pane-loop"; do
+    [[ -n "$loop" && -x "$loop" ]] && { realpath -s -- "$loop"; return 0; }
+  done
+  return 0
+}
+
 unit_path() { echo "$HOME/.config/systemd/user/claude-remote-${session#claude-}.service"; }
 
 install_boot() {
@@ -137,6 +145,10 @@ if tmux has-session -t "$session" 2>/dev/null; then
 else
   args=(env)
   if [[ -n "$config_dir" ]]; then args+=("CLAUDE_CONFIG_DIR=$config_dir"); else args+=(-u CLAUDE_CONFIG_DIR); fi
+  # The loop keeps the pane after claude exits so Cozempic's typed resume line restarts it; env stays outside
+  # it so the resumed claude keeps the account.
+  loop="$(find_pane_loop)"
+  [[ -z "$loop" ]] || args+=("$loop")
   args+=(claude --remote-control "$name")
   [[ -f "$settings" ]] && args+=(--settings "$settings")
   tmux new-session -d -s "$session" -c "$path" "$(printf '%q ' "${args[@]}")"
