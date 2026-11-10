@@ -145,18 +145,21 @@ Never trigger while the bot's own review of the head is probably still running: 
    fixed). Count them from the PR's threads and your replies.
 3. The commits since the last review only answer that review's findings.
 
-A skipped trigger leaves the state `WAITING` only when the §5a bot row cannot clear without a review on the head
-(below). The bot's findings are known only after it runs, so there is no pre-trigger similarity guard: repeats raise
-the decline rate in guard 2 for the next trigger.
+A skipped trigger changes nothing when the §5a bot row clears under the ancestor rule below. When it does not, stop
+the PR as `BLOCKED: needs a decision` instead of `WAITING`: name the guard that fired and offer the choices (post one
+`@coderabbitai review` anyway, accept the ancestor review, or wait for more commits). Never reschedule the same
+skipped trigger. The bot's findings are known only after it runs, so there is no pre-trigger similarity guard:
+repeats raise the decline rate in guard 2 for the next trigger.
 
 **Ancestor review (§5a bot row).** A review of an ancestor of the head clears the bot row when every commit since it
-only answers its findings (guard 3), CI is green on the head, and no open thread is critical or major. Otherwise
-the bot row needs a review on the head.
+only answers its findings (guard 3), CI is green on the head, no open thread is critical or major, and every
+critical or major finding in that review's body or threads is fixed or declined with a reply. Otherwise the bot row
+needs a review on the head.
 
 When the window is open and the head SHA has no gate-clearing review or completion comment (§5a), with no push
 pending, no accepted trigger already posted for this SHA, and no guard skipping it:
 - Report-only PRs (§2, without `--maintainer`): draft and post nothing. Report the head state and stop.
-- `ask` (default): draft the trigger comment, show it, and stop the PR as `BLOCKED: needs approval`.
+- `ask`: draft the trigger comment, show it, and stop the PR as `BLOCKED: needs approval`.
 - `auto`: post it and record its comment URL and the head SHA as a pending trigger before anything else. Then check
   `gh api repos/<o>/<r>/pulls/<N>/reviews` and `gh api repos/<o>/<r>/issues/<N>/comments` for the bot's review or a
   rate-limit notice on the head SHA. A notice resets `next_review_at` from rule 1 and ends the watch; so does one
@@ -284,8 +287,11 @@ merge, or `--merge` is set, run this gate first; if anything is open, report it 
 ### 5c. Merge (`--merge`, or when the user asks)
 
 Only your own PRs, and only from `READY`. Then:
-1. Capture the gated `headRefOid` and wait 5 minutes, so a late bot comment can still block. A wake-up scheduled
-   for this carries the SHA and the `--merge` flag.
+1. Capture the gated `headRefOid` and wait 5 minutes, so a late bot comment can still block. Keep the wait in the
+   active run when it can stay open. Otherwise schedule a separate one-shot job whose prompt starts
+   `babysit-merge <owner>/<repo>#<N>: <gated-sha>` and carries `--merge`. §3b deletes only `babysit-watch` jobs, so
+   it survives `READY`. When it runs it proceeds from a `READY` state file only if the head still equals the gated
+   SHA, and otherwise ends without acting.
 2. Rerun §5a against the current head. If the head changed or anything is open, do not merge: report it, and treat a
    new head as a fresh cycle.
 3. Squash-merge bound to the gated SHA: `gh pr merge <N> --repo <o>/<r> --squash --match-head-commit <gated-sha>`.
