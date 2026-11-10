@@ -18,7 +18,8 @@ Then enable whichever plugins you want:
   and babysit your open PRs across a repo, user, or org (`/babysit-pr-oss`).
 - `babysit-pane` — a pane and commands (`/babysit-pane` prints the state,
   `/babysit-panel` shows or hides the pane) for the PRs `/babysit-pr-oss`
-  watches. It needs `pr-workflow-oss` 1.10.0 or later, which writes the state
+  watches. The pane shows two rows per PR, fits its height, cycles through repos
+  with one button and keeps merged PRs on their own tab. It needs `pr-workflow-oss` 1.10.0 or later, which writes the state
   files, and shows only in the terminal; web and mobile get the printed text.
 - `architecture` — deep-module design, domain modeling, architecture
   improvement, spikes, design docs, and scaffolding a repo from a reference.

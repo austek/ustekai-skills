@@ -1,8 +1,23 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { BabysitState, Entry } from '../types'
-import { detailOf, parseEntry, STATE_DIR, statusOf, titleOf, visible } from './model'
+import type { BabysitState, Entry, Tab, View } from '../types'
+import {
+  clip,
+  detailOf,
+  isMerged,
+  nextRepo,
+  noteOf,
+  pageSizeOf,
+  parseEntry,
+  repoName,
+  select,
+  STATE_DIR,
+  statusOf,
+  summaryOf,
+  titleOf,
+  visible,
+} from './model'
 
 const PANE = 'babysit-pane'
 const STATUS_COMMAND = 'babysit-pane'
@@ -11,6 +26,7 @@ const POLL_MS = 10_000
 // Change the tag when an Entry's fields change: it declines what an earlier version stored.
 const entries = atom({ plugin: 'babysit-pane', key: 'entries' } as const, [], { shape: 'entries-1' })
 const isPaneShown = atom({ plugin: 'babysit-pane', key: 'isPaneShown' } as const, false)
+const view = atom({ plugin: 'babysit-pane', key: 'view' } as const, { tab: 'open', repo: '' }, { shape: 'view-2' })
 
 const COLOR: Readonly<Record<BabysitState, string>> = {
   BLOCKED: 'error',
@@ -19,6 +35,8 @@ const COLOR: Readonly<Record<BabysitState, string>> = {
   READY: 'success',
   CLOSED: 'inactive',
 }
+
+const chip = (label: string, isActive: boolean): string => (isActive ? `[${label}]` : label)
 
 async function readEntries($: EngineInterface): Promise<Entry[]> {
   const home = await $.env.get('HOME')
@@ -104,25 +122,45 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Button, Text } = $.ui.resolve(e)
-    const list = await read($, entries)
+    const all = await read($, entries)
     const now = await $.clock.now()
+    const current = await read($, view)
+    const columns = Math.max(20, Math.floor(e.props.bodyColumns))
+    const { items, more, repos, repo, at } = select(all, current, pageSizeOf(e.props.scroll.bodyRows))
+    const go = (next: Partial<View>) => void update($, view, v => ({ ...v, ...next }))
+    const openCount = all.filter(x => !isMerged(x)).length
+    const tabs: readonly [Tab, string][] = [
+      ['open', `open ${openCount}`],
+      ['merged', `merged ${all.length - openCount}`],
+    ]
+    const repoLabel = `${repo === '' ? 'all' : repoName(repo)} ${at + 1}/${repos.length + 1}`
 
     return (
       <Box flexDirection="column">
-        <Box justifyContent="flex-end">
-          <Button key="hide" label="hide" onPress={() => void setPane($, false)} />
-        </Box>
-        {list.length === 0 && <Text dimColor>No PR is being watched.</Text>}
-        {list.map(entry => (
-          <Box key={`${entry.repo}#${entry.pr}`} flexDirection="column" marginBottom={1}>
-            <Text color={COLOR[entry.state]} weight="bold">
-              {titleOf(entry)}
-            </Text>
-            {detailOf(entry, now).map((row, i) => (
-              <Text key={i} dimColor>{row}</Text>
+        <Box justifyContent="space-between">
+          <Box columnGap={1}>
+            {tabs.map(([tab, label]) => (
+              <Button key={tab} label={chip(label, tab === current.tab)} onPress={() => go({ tab, repo: '' })} />
             ))}
           </Box>
+          <Box columnGap={1}>
+            {repos.length > 1 && <Button key="repo" label={repoLabel} onPress={() => go({ repo: nextRepo(repos, repo) })} />}
+            <Button key="hide" label="hide" onPress={() => void setPane($, false)} />
+          </Box>
+        </Box>
+        {items.length === 0 && <Text dimColor>{current.tab === 'open' ? 'No PR is being watched.' : 'No merged PR yet.'}</Text>}
+        {items.map(entry => (
+          <Box key={`${entry.repo}#${entry.pr}`} flexDirection="column" marginBottom={1}>
+            <Box justifyContent="space-between">
+              <Text color={COLOR[entry.state]} weight="bold">
+                {titleOf(entry)}
+              </Text>
+              <Text dimColor>{summaryOf(entry, now, columns - titleOf(entry).length - 1)}</Text>
+            </Box>
+            <Text dimColor>{clip(`  ${noteOf(entry, now)}`, columns)}</Text>
+          </Box>
         ))}
+        {more > 0 && <Text dimColor>{`  … ${more} more`}</Text>}
       </Box>
     )
   })

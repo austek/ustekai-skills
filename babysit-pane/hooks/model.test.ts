@@ -1,7 +1,20 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Entry } from '../types'
-import { ageText, detailOf, parseEntry, statusOf, untilText, visible } from './model'
+import {
+  ageText,
+  clip,
+  detailOf,
+  nextRepo,
+  noteOf,
+  pageSizeOf,
+  parseEntry,
+  select,
+  statusOf,
+  summaryOf,
+  untilText,
+  visible,
+} from './model'
 
 const NOW = 1_800_000_000_000
 const MIN = 60_000
@@ -103,4 +116,68 @@ test('the status entry names the first entry and counts the rest', () => {
   expect(statusOf([])).toBeUndefined()
   expect(statusOf([entry({ state: 'BLOCKED' })])).toBe('babysit dotfiles#97 BLOCKED 1/3')
   expect(statusOf([entry(), entry({ pr: 98 }), entry({ pr: 99 })])).toBe('babysit dotfiles#97 WAITING 1/3 +2')
+})
+
+const OPEN = { tab: 'open', repo: '' } as const
+const paged = (entries: readonly Entry[], view: Parameters<typeof select>[1]) => select(entries, view, 3)
+
+test('the page size follows the pane height and never drops below one', () => {
+  expect(pageSizeOf(12)).toBe(3)
+  expect(pageSizeOf(38)).toBe(12)
+  expect(pageSizeOf(0)).toBe(1)
+  expect(pageSizeOf(Number.NaN)).toBe(1)
+})
+
+test('long text is cut to the width with an ellipsis and short text is left alone', () => {
+  expect(clip('abcdef', 4)).toBe('abc…')
+  expect(clip('abcd', 4)).toBe('abcd')
+  expect(clip('abcdef', 0)).toBe('abcdef')
+})
+
+test('an entry reads as a summary row and a note row', () => {
+  const e = entry({ pass: 7, fail: 1, pending: 0, openThreads: 1, updatedAt: NOW - 29 * MIN, nextReviewAt: NOW - MIN })
+
+  expect(summaryOf(e, NOW, 80)).toBe('7✓ 1✗ 0… · 1 thread · updated 29m ago')
+  expect(summaryOf(e, NOW, 30)).toBe('7✓ 1✗ 0… · 1 thread')
+  expect(summaryOf(e, NOW, 10)).toBe('7✓ 1✗ 0… …')
+  expect(noteOf(e, NOW)).toBe('CodeRabbit window open · next: wait for the homelab install')
+  expect(noteOf(entry({ next: undefined, nextReviewAt: undefined }), NOW)).toBe('')
+})
+const many = [1, 2, 3, 4, 5].map(pr => entry({ pr }))
+
+test('a tab holds only its own entries and what does not fit is counted', () => {
+  const all = [...many, entry({ pr: 90, state: 'CLOSED' })]
+
+  expect(paged(all, OPEN).items.map(e => e.pr)).toEqual([1, 2, 3])
+  expect(paged(all, OPEN).more).toBe(2)
+  expect(paged(all, { ...OPEN, tab: 'merged' }).items.map(e => e.pr)).toEqual([90])
+  expect(paged(all, { ...OPEN, tab: 'merged' }).more).toBe(0)
+})
+
+test('a repo narrows the view and the repo list keeps every repo of the tab', () => {
+  const all = [...many, entry({ pr: 7, repo: 'austek/ebbwise' })]
+  const result = paged(all, { ...OPEN, repo: 'austek/ebbwise' })
+
+  expect(result.items.map(e => e.pr)).toEqual([7])
+  expect(result.repos).toEqual(['austek/dotfiles', 'austek/ebbwise'])
+  expect(result.at).toBe(2)
+  expect(paged(all, OPEN).at).toBe(0)
+})
+
+test('a repo that vanished falls back to all repos instead of showing nothing', () => {
+  const result = paged(many, { tab: 'open', repo: 'austek/gone' })
+
+  expect(result.repo).toBe('')
+  expect(result.items.map(e => e.pr)).toEqual([1, 2, 3])
+  expect(paged([], OPEN)).toMatchObject({ items: [], more: 0, repos: [], at: 0 })
+})
+
+test('the repo button cycles all, each repo, then back to all', () => {
+  const repos = ['austek/dotfiles', 'austek/ebbwise']
+
+  expect(nextRepo(repos, '')).toBe('austek/dotfiles')
+  expect(nextRepo(repos, 'austek/dotfiles')).toBe('austek/ebbwise')
+  expect(nextRepo(repos, 'austek/ebbwise')).toBe('')
+  expect(nextRepo([], '')).toBe('')
+  expect(nextRepo(repos, 'austek/gone')).toBe('')
 })

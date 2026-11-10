@@ -66,7 +66,7 @@ test('a future updatedAt is capped at the file mtime, so the pane shows the real
   seed(on, { 'austek__dotfiles__97.json': future }, NOW - 3 * 3_600_000)
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
-  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, bodyColumns: 80 } })
   expect(await ui.find({ type: 'Text', text: /updated 3h ago/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /clock skew/ })).toBeUndefined()
   await ui.unmount()
@@ -88,5 +88,50 @@ test('with no state files the pane says nothing is watched', async ($, on) => {
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   expect((await ui.find({ type: 'Text' }))?.text).toBe('No PR is being watched.')
+  await ui.unmount()
+})
+
+const filed = (repo: string, pr: number, state: string): [string, string] => [
+  `${repo.replace('/', '__')}__${pr}.json`,
+  JSON.stringify({ ...JSON.parse(FILE), repo, pr, state }),
+]
+
+test('the pane pages by repo and keeps merged PRs on their own tab', async ($, on) => {
+  const files = Object.fromEntries([
+    ...[1, 2, 3, 4].map(pr => filed('austek/dotfiles', pr, 'BLOCKED')),
+    filed('austek/ebbwise', 5, 'BLOCKED'),
+    filed('austek/dotfiles', 6, 'CLOSED'),
+  ])
+  seed(on, files)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+
+  const tall = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, scroll: { offset: 0, bodyRows: 30 } } })
+  expect(await tall.find({ type: 'Text', text: /dotfiles#4 BLOCKED/ })).toBeDefined()
+  expect(await tall.find({ type: 'Text', text: /ebbwise#5 BLOCKED/ })).toBeDefined()
+  expect(await tall.find({ type: 'Text', text: /more/ })).toBeUndefined()
+  await tall.unmount()
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: { ...PANE.props, scroll: { offset: 0, bodyRows: 12 } } })
+  expect(await ui.find({ type: 'Text', text: /dotfiles#3 BLOCKED/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /dotfiles#4 BLOCKED/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /dotfiles#6/ })).toBeUndefined()
+  expect((await ui.find({ type: 'Text', text: /more/ }))?.text).toBe('  … 2 more')
+  expect((await ui.find({ key: 'repo' }))?.text).toMatch(/all 1\/3/)
+
+  await ui.press({ key: 'repo' })
+  expect((await ui.find({ key: 'repo' }))?.text).toMatch(/dotfiles 2\/3/)
+  expect(await ui.find({ type: 'Text', text: /ebbwise#5 BLOCKED/ })).toBeUndefined()
+
+  await ui.press({ key: 'repo' })
+  expect((await ui.find({ key: 'repo' }))?.text).toMatch(/ebbwise 3\/3/)
+  expect(await ui.find({ type: 'Text', text: /ebbwise#5 BLOCKED/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /dotfiles#1 BLOCKED/ })).toBeUndefined()
+
+  await ui.press({ key: 'repo' })
+  expect((await ui.find({ key: 'repo' }))?.text).toMatch(/all 1\/3/)
+
+  await ui.press({ key: 'merged' })
+  expect(await ui.find({ type: 'Text', text: /dotfiles#6 CLOSED/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /ebbwise#5/ })).toBeUndefined()
   await ui.unmount()
 })

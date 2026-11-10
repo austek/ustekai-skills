@@ -16,8 +16,13 @@ export type Entry = {
   updatedAt: number
 }
 
+export type Tab = 'open' | 'merged'
+
+/** What the pane shows: one tab and one repo (`''` for all). */
+export type View = { tab: Tab; repo: string }
+
 declare module 'claude-code' {
   interface PluginState {
-    'babysit-pane': { entries: Shaped<Entry[]>; isPaneShown: boolean }
+    'babysit-pane': { entries: Shaped<Entry[]>; isPaneShown: boolean; view: Shaped<View> }
   }
 }

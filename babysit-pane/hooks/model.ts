@@ -1,4 +1,4 @@
-import type { BabysitState, Entry } from '../types'
+import type { BabysitState, Entry, Tab, View } from '../types'
 
 export const SCHEMA_VERSION = 1
 export const STATE_DIR = '.cache/babysit-pr'
@@ -79,7 +79,7 @@ export function untilText(at: number | undefined, now: number): string | undefin
   return minutes <= 0 ? 'CodeRabbit window open' : `CodeRabbit in ${minutes}m`
 }
 
-const repoName = (repo: string): string => repo.split('/').at(-1) ?? repo
+export const repoName = (repo: string): string => repo.split('/').at(-1) ?? repo
 
 export const labelOf = (e: Entry): string => `${repoName(e.repo)}#${e.pr}`
 
@@ -103,6 +103,66 @@ export function detailOf(e: Entry, now: number): string[] {
   const window = untilText(e.nextReviewAt, now)
   const rows = [`${checks} · ${threads} · ${ageText(e.updatedAt, now)}`, ...(window === undefined ? [] : [window])]
   return e.next === undefined ? rows : [...rows, `next: ${e.next}`]
+}
+
+/** Rows one entry takes in the pane: the title row, the note row and a blank row. */
+export const ENTRY_ROWS = 3
+/** Rows the pane spends on the header and the `… N more` row. */
+const CONTROL_ROWS = 2
+
+/** How many entries fit a pane body of `bodyRows` rows; one at least, so a squeezed pane still shows something. */
+export const pageSizeOf = (bodyRows: number): number =>
+  Math.max(1, Math.floor((whole(bodyRows) - CONTROL_ROWS) / ENTRY_ROWS))
+
+/** Cuts text to `width` cells, ending in an ellipsis, so one entry row never wraps into two. */
+export const clip = (text: string, width: number): string =>
+  width <= 1 || text.length <= width ? text : `${text.slice(0, width - 1)}…`
+
+/** The right-hand side of the title row: check counts, threads and the age of the file; the age goes first when `width` is short. */
+export function summaryOf(e: Entry, now: number, width: number): string {
+  const threads = `${e.openThreads} thread${e.openThreads === 1 ? '' : 's'}`
+  const counts = `${e.pass}✓ ${e.fail}✗ ${e.pending}… · ${threads}`
+  const full = `${counts} · ${ageText(e.updatedAt, now)}`
+  return full.length <= width ? full : clip(counts, width)
+}
+
+/** The note row: the review window and the next step, joined; empty when neither exists. */
+export function noteOf(e: Entry, now: number): string {
+  const parts = [untilText(e.nextReviewAt, now), e.next === undefined ? undefined : `next: ${e.next}`]
+  return parts.filter(p => p !== undefined).join(' · ')
+}
+
+export const isMerged = (e: Entry): boolean => e.state === 'CLOSED'
+
+const inTab = (entries: readonly Entry[], tab: Tab): Entry[] =>
+  entries.filter(e => isMerged(e) === (tab === 'merged'))
+
+export type Shown = {
+  items: Entry[]
+  /** Entries of the view that do not fit `size`. */
+  more: number
+  /** The repos of the tab, in order; the pane cycles `all` then each of these. */
+  repos: string[]
+  /** The repo the view shows, `''` for all. */
+  repo: string
+  /** Zero-based place in the cycle `all`, `repos[0]`, `repos[1]`, and so on. */
+  at: number
+}
+
+/** What the pane draws: one tab, narrowed to one repo. A repo that no longer exists falls back to all repos. */
+export function select(entries: readonly Entry[], view: View, size: number): Shown {
+  const tab = inTab(entries, view.tab)
+  const repos = [...new Set(tab.map(e => e.repo))]
+  const repo = repos.includes(view.repo) ? view.repo : ''
+  const shown = repo === '' ? tab : tab.filter(e => e.repo === repo)
+
+  return { items: shown.slice(0, size), more: Math.max(0, shown.length - size), repos, repo, at: repo === '' ? 0 : repos.indexOf(repo) + 1 }
+}
+
+/** The repo after `repo` in the cycle `all`, each repo, back to `all`; `''` is all. */
+export function nextRepo(repos: readonly string[], repo: string): string {
+  const next = repos.indexOf(repo) + 1
+  return repo !== '' && next === 0 ? '' : (repos[next] ?? '')
 }
 
 /** The one-line status entry: the entry that needs a person most, and how many more are watched. */
