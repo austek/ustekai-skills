@@ -25,7 +25,7 @@
     {
       "name": "pr-workflow-oss",
       "description": "Open, review, land, and babysit pull requests on personal or open-source repos.",
-      "version": "1.12.0",
+      "version": "1.13.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
@@ -48,7 +48,7 @@
     {
       "name": "architecture",
       "description": "Deep-module design, domain modeling, codebase architecture improvement, spikes, design docs, and repo scaffolding from a reference.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
@@ -60,7 +60,7 @@
     {
       "name": "productivity",
       "description": "Plan-sharpening interviews, agent handoffs, and decision questionnaires.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
@@ -72,7 +72,7 @@
     {
       "name": "dev-utilities",
       "description": "IDE MCP tool selection, comment cleanup, code-claim verification, business analysis, HTML diff explanations, remote Claude sessions, budgeted repo audits.",
-      "version": "1.6.0",
+      "version": "1.7.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
