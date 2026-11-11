@@ -294,7 +294,7 @@ Only your own PRs, and only from `READY`. Then:
    active run when it can stay open. Otherwise schedule a separate one-shot job whose prompt starts
    `babysit-merge <owner>/<repo>#<N>: <gated-sha>` and carries `--merge`. §3b deletes only `babysit-watch` jobs, so
    it survives `READY`. When it runs it proceeds from a `READY` state file only if the head still equals the gated
-   SHA, and otherwise ends without acting.
+   SHA. Otherwise it writes `WAITING` for the new head to the state file (§5b), runs a fresh §3 cycle on it, and ends.
 2. Reclassify the PR against the current head: every §5 `READY` condition (all checks pass, `mergeStateStatus`
    `CLEAN`, no pending drafted reply), the `land-pr-oss` §8 stop conditions, and the full §5a gate. A head SHA that
    did not change proves nothing: a check can fail or mergeability can change during the wait. If anything is no
@@ -307,8 +307,10 @@ Only your own PRs, and only from `READY`. Then:
    which covers both: `gh api graphql -f query='query($o:String!,$r:String!,$b:String!){repository(owner:$o,name:$r){
    mergeQueue(branch:$b){id}}}' -f o=<o> -f r=<r> -f b=<base>`. A non-null `mergeQueue` means stop likewise.
 4. Squash-merge bound to the gated SHA, with the message set explicitly so the repository default cannot drop the
-   breaking-change footers: `gh pr merge <N> --repo <o>/<r> --squash --match-head-commit <gated-sha> --subject
-   "<PR title>" --body "<every BREAKING CHANGE: footer from git log <base>..<head> --format=%b, else empty>"`.
+   breaking-change footers. Write the PR title and every `BREAKING CHANGE:` footer from `git log <base>..<head>
+   --format=%b` (none: an empty file) to scratchpad files with the Write tool, then run `gh pr merge <N> --repo
+   <o>/<r> --squash --match-head-commit <gated-sha> --subject "$(cat <title-file>)" --body-file <footer-file>`.
+   Never put PR or commit text into the command line itself.
    Never `--admin`, never `--delete-branch`, never another merge method.
 5. Read `gh pr view <N> --repo <o>/<r> --json state,mergedAt,mergeCommit`. Write `CLOSED` to the state file (§5b)
    and report the merge commit only when `state` is `MERGED`; otherwise report what GitHub says and keep `WAITING`.
