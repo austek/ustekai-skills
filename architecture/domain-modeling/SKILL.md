@@ -1,5 +1,6 @@
 ---
 name: domain-modeling
+model: opus
 description: Build and sharpen project's domain model (glossary/ADRs). Use when modifying CONTEXT.md or ADRs.
 ---
 

@@ -26,6 +26,6 @@ Number each question and provide a recommended answer. Use this exact format:
 ```
 
 ## 3. Fact-Finding vs. Decisions
-- **Facts**: Finding facts is YOUR job. If a frontier question requires environment context (files, tools), dispatch a sub-agent to find it. Do NOT ask the user for facts you can look up yourself.
+- **Facts**: Finding facts is YOUR job. If a frontier question requires environment context (files, tools), dispatch a sub-agent with `model: haiku` to find it. Do NOT ask the user for facts you can look up yourself.
 - **Non-Blocking**: Do not block the whole round on a sub-agent. Ask the rest of the frontier immediately. Only the questions downstream of the running sub-agent must wait.
 - **Decisions**: Only decisions belong to the user.

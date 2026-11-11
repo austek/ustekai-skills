@@ -48,7 +48,7 @@ When given more than one PR, explain the **combined result**, not each PR in iso
 
 Add a **Critic review** section to the page, not just a chat report.
 
-- **Run the critic as a fresh, read-only subagent** (Agent tool). A critic handed your conclusions tends to confirm them. Give it the repo path, the commit SHA, how to get the diff, and the output format below. Do not give it your findings, your intuition summary, or the PR description's claims. Tell it not to modify or commit anything.
+- **Run the critic as a fresh, read-only subagent** (Agent tool, `model: opus`). A critic handed your conclusions tends to confirm them. Give it the repo path, the commit SHA, how to get the diff, and the output format below. Do not give it your findings, your intuition summary, or the PR description's claims. Tell it not to modify or commit anything.
 - Point the critic at the worktree path for the resolved SHA and at the matching diff, and tell it to review the combined state there. Never rely on whatever is checked out in the user's tree: it may be a different revision from the requested PR.
 - Ask for concrete findings with `file:line`, a failure scenario per finding, a severity (Blocker/Major/Medium/Low), and an overall verdict. If the change's context matters (POC vs. production), ask for a verdict appropriate to it.
 - Verify each cited `file:line` against the real file yourself before it goes on the page.

@@ -13,7 +13,7 @@ Write and show the user:
 Wait for user to read while sub-agents spawn.
 
 ### 2. Spawn Sub-Agents (Parallel)
-Spawn ≥3 sub-agents with a technical brief (files, coupling, dependencies). Enforce domain & [SKILL.md](SKILL.md) vocabulary. Apply distinct constraints:
+Spawn ≥3 sub-agents with `model: opus` and a technical brief (files, coupling, dependencies). Enforce domain & [SKILL.md](SKILL.md) vocabulary. Apply distinct constraints:
 - **Agent 1**: Minimize interface (1-3 entry points max). Maximize leverage.
 - **Agent 2**: Maximize flexibility (many use cases/extension).
 - **Agent 3**: Optimize common caller (trivial default case).

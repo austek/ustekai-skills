@@ -153,6 +153,10 @@ For each item in the work set, draft the code change. Then, before touching git:
 - Never push or comment until approved — same rule as `create-pr-oss` §1 Safety — except a push that the
   `--auto` level allows (below). Replies and comments always need approval. Never resolve a thread at all.
 
+When the drafted diff adds or changes comments (same grep as `create-pr-oss` §2), run
+`pr-review-toolkit:comment-analyzer` (Agent tool, `model: haiku`) on it before showing the summary, and fix its
+findings first. This applies to pushes that `--auto` allows without asking too.
+
 An ambiguous or debatable comment (reviewer disagrees on approach, asks a question with no clear
 single fix) is not something to silently code around — draft a reply instead and leave the thread open
 for the user to send, don't code around it to make the thread count go down.
