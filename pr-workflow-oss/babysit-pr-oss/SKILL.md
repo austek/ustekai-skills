@@ -72,7 +72,7 @@ conditions in §4.
 
 More than one PR resolves: print the list (`owner/repo#N title`) and ask the user to confirm before the first
 cycle. Process PRs one at a time; each gets its own `--cycles` budget. With more than one PR, run each PR's cycles in its
-own subagent (Agent tool) so one PR's logs and diffs never enter another PR's context or the parent's. The parent
+own subagent (Agent tool, `model: sonnet`) so one PR's logs and diffs never enter another PR's context or the parent's. The parent
 holds every approval prompt and prints the §6 report. The subagent receives the PR, flags and this skill's rules,
 including no AI attribution and no thread resolution, plus the PR's running counts of unasked low pushes and
 medium fix rounds, its `next_review_at` (§3a), and the head SHA and comment URL of each posted CodeRabbit trigger and whether it is pending, accepted or rate-limited

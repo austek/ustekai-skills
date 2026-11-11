@@ -26,7 +26,9 @@ Before writing the PR description, check whether the diff touches comments:
 ```bash
 git diff <base>...HEAD -U0 -- . | grep -qE '^\+.*(//|#[^!]|/\*|\*/)'
 ```
-If it does, invoke the `prune-comments` skill scoped to this branch first.
+If it does, invoke the `prune-comments` skill scoped to this branch first, then run
+`pr-review-toolkit:comment-analyzer` (Agent tool, `model: haiku`) on the diff and fix every comment it flags as
+inaccurate or load-bearing-but-missing before the first push.
 
 ## 3. Docs Check
 Docs drift silently — a repo can go a long time with public API changes and zero corresponding

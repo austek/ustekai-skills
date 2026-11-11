@@ -46,7 +46,7 @@ Run after the host's Step 3, before delegation. Skip when `huntBase...head` is e
 
 1. **Read the calibration log** and compute the area flags for every touched area. Show a "weak area" or "unproven area" banner per flagged area.
 2. **Build or reuse a primer per touched area** (see Area Primer).
-3. **Gather the brief in parallel.** Dispatch read-only subagents for the area map, history and repo traps. Run the primer subagents in the same batch. Never gather serially in one agent.
+3. **Gather the brief in parallel.** Dispatch read-only subagents with `model: haiku` for the area map, history and repo traps. Run the primer subagents (`model: sonnet`) in the same batch. Never gather serially in one agent.
 4. **Write one self-contained HTML file** (inline CSS and SVG, no network) to `$HOME/.claude/scratches/review-briefs/<repo>-<number>-<shortHead>.html` and open it with `xdg-open`.
 5. **Ask the predict prompt** in chat, verbatim: "Before I run the review: where do you think the risk is? List files or concerns, or say `skip`." Store the answer verbatim as `predictions`. Add no commentary.
 
@@ -77,7 +77,7 @@ A conceptual page per touched area, independent of any PR. Contents: purpose and
 - **Reuse:** reuse when `git rev-list --count <primerCommit>..<head> -- <areaDir>` is below 20. Otherwise rebuild. The user can force a rebuild.
 - **Sources, in order:** area `CLAUDE.md` and rules, `docs/` and architecture pages, READMEs and ADRs, then code. Label anything drawn from code alone "inferred from code, unverified". With no authoritative source, label every section so.
 - **Citations:** every claim cites a source path or `path:line`. Drop unresolvable claims.
-- **Build:** one read-only subagent per area, in parallel with the other brief sections.
+- **Build:** one read-only `model: sonnet` subagent per area, in parallel with the other brief sections.
 - **Record:** `primer` is `cached` when every area reused its cache, `rebuilt` when any rebuilt, `"skipped"` when the brief is skipped.
 
 ## Phase B: Reveal and Verify
