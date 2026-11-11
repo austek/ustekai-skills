@@ -297,13 +297,16 @@ Only your own PRs, and only from `READY`. Then:
    `CLEAN`, no pending drafted reply), the `land-pr-oss` §8 stop conditions, and the full §5a gate. A head SHA that
    did not change proves nothing: a check can fail or mergeability can change during the wait. If anything is no
    longer true, do not merge: report it, and treat a new head as a fresh cycle.
-3. Check what the merge can do beyond squashing. `gh repo view <o>/<r> --json deleteBranchOnMerge,mergeCommitAllowed`
-   reports the head repository's setting: when `deleteBranchOnMerge` is true the merge would delete the head branch,
-   so stop as `BLOCKED: needs a decision` (the user changes the setting or approves). A required merge queue
-   (`gh api repos/<o>/<r>/rules/branches/<base>` lists a `merge_queue` rule) picks the method itself, so stop
-   likewise rather than assume a squash.
-4. Squash-merge bound to the gated SHA: `gh pr merge <N> --repo <o>/<r> --squash --match-head-commit <gated-sha>`.
-   Never `--admin`, never `--delete-branch`, never another merge method. The squash subject is the PR title.
+3. Check what the merge can do beyond squashing. Resolve the head repository from the PR
+   (`gh pr view <N> --repo <o>/<r> --json headRepository,headRepositoryOwner`): for a fork PR it is the fork, not
+   `<o>/<r>`. Then `gh repo view <head-owner>/<head-repo> --json deleteBranchOnMerge`: when it is true the merge
+   would delete the head branch, so stop as `BLOCKED: needs a decision` (the user changes the setting or approves).
+   A required merge queue picks the method itself: read every page of
+   `gh api --paginate repos/<o>/<r>/rules/branches/<base>` and stop likewise when any rule has type `merge_queue`.
+4. Squash-merge bound to the gated SHA, with the message set explicitly so the repository default cannot drop the
+   breaking-change footers: `gh pr merge <N> --repo <o>/<r> --squash --match-head-commit <gated-sha> --subject
+   "<PR title>" --body "<every BREAKING CHANGE: footer from git log <base>..<head> --format=%b, else empty>"`.
+   Never `--admin`, never `--delete-branch`, never another merge method.
 5. Read `gh pr view <N> --repo <o>/<r> --json state,mergedAt,mergeCommit`. Write `CLOSED` to the state file (§5b)
    and report the merge commit only when `state` is `MERGED`; otherwise report what GitHub says and keep `WAITING`.
 
