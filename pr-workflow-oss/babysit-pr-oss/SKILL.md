@@ -95,7 +95,8 @@ Check before the first cycle:
 
 One cycle:
 0. **Check for a running CodeRabbit review.** Read `gh pr checks <N> --repo <owner>/<repo> --json name,bucket` once.
-   When the CodeRabbit check is `pending`, report `WAITING` for it (§3a) and move on without starting the watch.
+   When the CodeRabbit check is `pending`, report `WAITING` for it (§3a) and move on without waiting for CI; §3b
+   still schedules the next wake-up, and no second trigger is posted.
 1. **Wait for CI.** Run `gh pr checks <N> --repo <owner>/<repo> --watch` with `run_in_background`, then read its
    output when it finishes. No custom sleep or poll loops for the CI wait. No checks yet after the push settles:
    report that and stop.
@@ -147,7 +148,7 @@ Never trigger while the bot's own review of the head is probably still running: 
 
 A skipped trigger changes nothing when the §5a bot row clears under the ancestor rule below. When it does not, stop
 the PR as `BLOCKED: needs a decision` instead of `WAITING`: name the guard that fired and offer the choices (post one
-`@coderabbitai review` anyway, accept the ancestor review, or wait for more commits). Never reschedule the same
+`@coderabbitai review` anyway, or wait for more commits). Never reschedule the same
 skipped trigger. The bot's findings are known only after it runs, so there is no pre-trigger similarity guard:
 repeats raise the decline rate in guard 2 for the next trigger.
 
@@ -163,8 +164,9 @@ pending, and no accepted trigger already posted for this SHA:
   apply: the user decides.
 - `auto`, when no guard skips it: post it and record its comment URL and the head SHA as a pending trigger before anything else. Then check
   `gh api repos/<o>/<r>/pulls/<N>/reviews` and `gh api repos/<o>/<r>/issues/<N>/comments` for the bot's review or a
-  rate-limit notice on the head SHA. A notice resets `next_review_at` from rule 1 and ends the watch; so does one
-  check with neither present, and the trigger stays pending. `auto` applies only to your own PRs: a `--maintainer`
+  rate-limit notice on the head SHA. A notice resets `next_review_at` from rule 1 and ends this run's check; so does one
+  check with neither present, and the trigger stays pending. Either way the PR is `WAITING` and §3b still schedules
+  the next wake-up, without posting another trigger. `auto` applies only to your own PRs: a `--maintainer`
   PR uses the `ask` flow whatever the flag says. Never `--use-credits`.
 
 Trigger command: `@coderabbitai review` (incremental) when the latest bot review's `commit_id` is an ancestor of the
@@ -301,8 +303,9 @@ Only your own PRs, and only from `READY`. Then:
    (`gh pr view <N> --repo <o>/<r> --json headRepository,headRepositoryOwner`): for a fork PR it is the fork, not
    `<o>/<r>`. Then `gh repo view <head-owner>/<head-repo> --json deleteBranchOnMerge`: when it is true the merge
    would delete the head branch, so stop as `BLOCKED: needs a decision` (the user changes the setting or approves).
-   A required merge queue picks the method itself: read every page of
-   `gh api --paginate repos/<o>/<r>/rules/branches/<base>` and stop likewise when any rule has type `merge_queue`.
+   A merge queue picks the method itself, whether a ruleset or classic branch protection requires it. Ask GraphQL,
+   which covers both: `gh api graphql -f query='query($o:String!,$r:String!,$b:String!){repository(owner:$o,name:$r){
+   mergeQueue(branch:$b){id}}}' -f o=<o> -f r=<r> -f b=<base>`. A non-null `mergeQueue` means stop likewise.
 4. Squash-merge bound to the gated SHA, with the message set explicitly so the repository default cannot drop the
    breaking-change footers: `gh pr merge <N> --repo <o>/<r> --squash --match-head-commit <gated-sha> --subject
    "<PR title>" --body "<every BREAKING CHANGE: footer from git log <base>..<head> --format=%b, else empty>"`.
