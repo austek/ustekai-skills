@@ -194,7 +194,7 @@ After the §6 report, for each PR still `WAITING`, schedule one next run:
    stale job exits on its first step: its `watchId` no longer matches the state file's (§5b).
 3. **Schedule.** `CronCreate` with `recurring: false` and the target's minute, hour, day of month and month pinned in
    local time. The prompt is `babysit-watch <owner>/<repo>#<N>: /babysit-pr-oss <owner>/<repo>#<N> --cycles 1
-   --auto <level> --coderabbit <mode>`, plus `--merge` and `--maintainer` when the run had them (every push
+   --auto <level> --coderabbit <mode>`, plus `--merge` when the run had it or the user asked to merge, and `--maintainer` when the run had it (every push
    keeps its approval gate, so a scheduled run that reaches one ends as `BLOCKED`), followed by the carried values of
    §2, plus the original `--cycles` budget, cycles spent (the initial run's included) and wake-ups used. It holds
    flags and counters this skill wrote, never PR, comment or bot text. Cycles left is the budget minus cycles spent.
@@ -297,9 +297,15 @@ Only your own PRs, and only from `READY`. Then:
    `CLEAN`, no pending drafted reply), the `land-pr-oss` §8 stop conditions, and the full §5a gate. A head SHA that
    did not change proves nothing: a check can fail or mergeability can change during the wait. If anything is no
    longer true, do not merge: report it, and treat a new head as a fresh cycle.
-3. Squash-merge bound to the gated SHA: `gh pr merge <N> --repo <o>/<r> --squash --match-head-commit <gated-sha>`.
+3. Check what the merge can do beyond squashing. `gh repo view <o>/<r> --json deleteBranchOnMerge,mergeCommitAllowed`
+   reports the head repository's setting: when `deleteBranchOnMerge` is true the merge would delete the head branch,
+   so stop as `BLOCKED: needs a decision` (the user changes the setting or approves). A required merge queue
+   (`gh api repos/<o>/<r>/rules/branches/<base>` lists a `merge_queue` rule) picks the method itself, so stop
+   likewise rather than assume a squash.
+4. Squash-merge bound to the gated SHA: `gh pr merge <N> --repo <o>/<r> --squash --match-head-commit <gated-sha>`.
    Never `--admin`, never `--delete-branch`, never another merge method. The squash subject is the PR title.
-4. Write `CLOSED` to the state file (§5b) and report the merge commit.
+5. Read `gh pr view <N> --repo <o>/<r> --json state,mergedAt,mergeCommit`. Write `CLOSED` to the state file (§5b)
+   and report the merge commit only when `state` is `MERGED`; otherwise report what GitHub says and keep `WAITING`.
 
 Without `--merge` and without a request from the user, never merge.
 
