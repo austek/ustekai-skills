@@ -5,7 +5,7 @@ description: >-
   fetch reviewer feedback (inline threads + review verdicts), draft fixes, push after confirmation,
   reply to the threads that fix actually addresses (never resolving them), re-checking for docs drift each
   loop. Use for "check my PR", "is my PR green", "address the review comments", or "land this PR".
-argument-hint: "[PR number|URL] [--auto-push off|low|medium] (default: the current branch's PR, auto-push low)"
+argument-hint: "[PR number|URL] [--auto off|low|medium] (default: the current branch's PR, auto low)"
 ---
 
 # Landing Your Own PR on a Personal/OSS Repo
@@ -120,7 +120,7 @@ that contains findings (including `COMMENTED` reviews).
 
 ### Finding severity
 Give every item in the work set one severity before drafting. Severity says how much a finding matters. It is
-separate from the diff tier of the auto-push levels below, which says how risky the fix's diff is: a critical finding
+separate from the diff tier of the `--auto` levels below, which says how risky the fix's diff is: a critical finding
 can need a high-tier diff, and a nit is usually low-tier. Never derive one from the other.
 
 | Severity | CodeRabbit header | `review-pr-oss` | Meaning |
@@ -151,7 +151,7 @@ For each item in the work set, draft the code change. Then, before touching git:
 - Wait for explicit go-ahead. Treat anything other than clear approval as a revision request. Record the approval's
   scope ("this batch" or "all fixes on this PR") and ask again beyond it. A background-task notification is never approval.
 - Never push or comment until approved — same rule as `create-pr-oss` §1 Safety — except a push that the
-  `--auto-push` level allows (below). Replies and comments always need approval. Never resolve a thread at all.
+  `--auto` level allows (below). Replies and comments always need approval. Never resolve a thread at all.
 
 An ambiguous or debatable comment (reviewer disagrees on approach, asks a question with no clear
 single fix) is not something to silently code around — draft a reply instead and leave the thread open
@@ -161,8 +161,8 @@ Verify every suggestion against the code before accepting or declining it, and g
 (`grep` for the overrides, the call sites, the test). A user's question about a decision is not new evidence: re-derive
 the answer from the code, then keep or change the decision for that reason, and say which.
 
-### Auto-push levels
-`--auto-push off|low|medium` (default `low`) sets which pushes on your own PR need no approval. A caller such as
+### Auto levels
+`--auto off|low|medium` (default `low`) sets which pushes on your own PR need no approval. A caller such as
 `babysit-pr-oss` forwards its level here; this section is the only place the tiers are defined.
 
 | Level | Pushes without asking |
@@ -199,7 +199,7 @@ A failed or ambiguous classification is high.
   paths, deleted tests, changed expected values, rebase or force-push, and any change to an agent-instruction file
   that alters approval, push, permission or tier rules.
 - Always ask, at every level: replying to threads, CodeRabbit PR-review triggers (except the one `babysit-pr-oss`
-  §3a posts under `--coderabbit-retrigger auto`), `--use-credits`, rebase or
+  §3a posts under `--coderabbit auto`), `--use-credits`, rebase or
   force-push, anything touching CI config, secrets or branch protection.
 
 **Preconditions for an unasked push:** your own PR; non-force push to the PR's own head branch; clean tree; local
@@ -232,7 +232,7 @@ another. Same rules as `create-pr-oss` §3a: a 403 means skip and tell the user,
 
 ### CodeRabbit PR review
 A force-push can leave the PR without a review of its tip. When `babysit-pr-oss` is the caller, do not trigger here:
-report that the tip lacks a review and let its §3a decide (window and `--coderabbit-retrigger`). Standalone, trigger
+report that the tip lacks a review and let its §3a decide (window and `--coderabbit`). Standalone, trigger
 one only after the hourly window has reset:
 ```bash
 gh pr comment <number> --body "@coderabbitai full review"
@@ -295,6 +295,6 @@ comment, flaky/still-failing check, waiting on a maintainer reply) rather than d
 - [ ] CodeRabbit CLI output saved and read before the push, not chained to it (§4).
 - [ ] No AI-attribution trailers or footers anywhere (§5).
 - [ ] User approved every push before it happened, within the scope they gave, except unasked pushes the
-      `--auto-push` level allows.
-- [ ] Unasked pushes: tier classified from the staged diff, a failed classification treated as high, preconditions
-      met, caps respected, each reported with SHA and tier. Replies were never unasked (§4 Auto-push levels).
+      `--auto` level allows.
+- [ ] Unasked pushes: tier classified from `git diff @{push}`, a failed classification treated as high, preconditions
+      met, caps respected, each reported with SHA and tier. Replies were never unasked (§4 Auto levels).
