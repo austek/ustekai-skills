@@ -4,7 +4,7 @@ description: >-
   Watch your own open PRs on personal/OSS GitHub repos for a bounded number of CI cycles, running
   land-pr-oss on each cycle. Target one PR (default: the current branch's), a repo, or every repo of a
   GitHub user or org. Use for "babysit my PR", "watch CI on my PRs", "keep my PRs green", or "babysit all my
-  PRs in <org>". Merges only with --merge, and only at READY.
+  PRs in <org>". Merges only with --merge or when you ask, and only at READY.
 argument-hint: "[target] [--auto off|low|medium] [--coderabbit ask|auto] [--merge] [--no-watch] [--cycles N]"
 ---
 
@@ -164,8 +164,9 @@ pending, and no accepted trigger already posted for this SHA:
   apply: the user decides.
 - `auto`, when no guard skips it: post it and record its comment URL and the head SHA as a pending trigger before anything else. Then check
   `gh api repos/<o>/<r>/pulls/<N>/reviews` and `gh api repos/<o>/<r>/issues/<N>/comments` for the bot's review or a
-  rate-limit notice on the head SHA. A notice resets `next_review_at` from rule 1 and ends this run's check; so does one
-  check with neither present, and the trigger stays pending. Either way the PR is `WAITING` and §3b still schedules
+  rate-limit notice on the head SHA. A notice resets `next_review_at` from rule 1, is recorded as rate-limited, releases
+  the trigger (a later wake-up may post once the window reopens) and ends this run's check. A check with neither
+  present also ends it, and the trigger stays pending. Either way the PR is `WAITING` and §3b still schedules
   the next wake-up, without posting another trigger. `auto` applies only to your own PRs: a `--maintainer`
   PR uses the `ask` flow whatever the flag says. Never `--use-credits`.
 
@@ -307,8 +308,10 @@ Only your own PRs, and only from `READY`. Then:
    which covers both: `gh api graphql -f query='query($o:String!,$r:String!,$b:String!){repository(owner:$o,name:$r){
    mergeQueue(branch:$b){id}}}' -f o=<o> -f r=<r> -f b=<base>`. A non-null `mergeQueue` means stop likewise.
 4. Squash-merge bound to the gated SHA, with the message set explicitly so the repository default cannot drop the
-   breaking-change footers. Write the PR title and every `BREAKING CHANGE:` footer from `git log <base>..<head>
-   --format=%b` (none: an empty file) to scratchpad files with the Write tool, then run `gh pr merge <N> --repo
+   breaking-change footers. Run `git fetch origin <base>` first and read `origin/<base>..<head>`; when the fetch or
+   the log read fails, stop as `BLOCKED`. Write the PR title and every `BREAKING CHANGE:` footer from
+   `git log origin/<base>..<head> --format=%b` (none: an empty file) to scratchpad files with the Write tool, then
+   run `gh pr merge <N> --repo
    <o>/<r> --squash --match-head-commit <gated-sha> --subject "$(cat <title-file>)" --body-file <footer-file>`.
    Never put PR or commit text into the command line itself.
    Never `--admin`, never `--delete-branch`, never another merge method.
