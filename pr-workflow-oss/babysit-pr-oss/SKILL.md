@@ -157,10 +157,11 @@ critical or major finding in that review's body or threads is fixed or declined 
 needs a review on the head.
 
 When the window is open and the head SHA has no gate-clearing review or completion comment (§5a), with no push
-pending, no accepted trigger already posted for this SHA, and no guard skipping it:
+pending, and no accepted trigger already posted for this SHA:
 - Report-only PRs (§2, without `--maintainer`): draft and post nothing. Report the head state and stop.
-- `ask`: draft the trigger comment, show it, and stop the PR as `BLOCKED: needs approval`.
-- `auto`: post it and record its comment URL and the head SHA as a pending trigger before anything else. Then check
+- `ask`: draft the trigger comment, show it, and stop the PR as `BLOCKED: needs approval`. The guards above do not
+  apply: the user decides.
+- `auto`, when no guard skips it: post it and record its comment URL and the head SHA as a pending trigger before anything else. Then check
   `gh api repos/<o>/<r>/pulls/<N>/reviews` and `gh api repos/<o>/<r>/issues/<N>/comments` for the bot's review or a
   rate-limit notice on the head SHA. A notice resets `next_review_at` from rule 1 and ends the watch; so does one
   check with neither present, and the trigger stays pending. `auto` applies only to your own PRs: a `--maintainer`
@@ -292,8 +293,10 @@ Only your own PRs, and only from `READY`. Then:
    `babysit-merge <owner>/<repo>#<N>: <gated-sha>` and carries `--merge`. §3b deletes only `babysit-watch` jobs, so
    it survives `READY`. When it runs it proceeds from a `READY` state file only if the head still equals the gated
    SHA, and otherwise ends without acting.
-2. Rerun §5a against the current head. If the head changed or anything is open, do not merge: report it, and treat a
-   new head as a fresh cycle.
+2. Reclassify the PR against the current head: every §5 `READY` condition (all checks pass, `mergeStateStatus`
+   `CLEAN`, no pending drafted reply), the `land-pr-oss` §8 stop conditions, and the full §5a gate. A head SHA that
+   did not change proves nothing: a check can fail or mergeability can change during the wait. If anything is no
+   longer true, do not merge: report it, and treat a new head as a fresh cycle.
 3. Squash-merge bound to the gated SHA: `gh pr merge <N> --repo <o>/<r> --squash --match-head-commit <gated-sha>`.
    Never `--admin`, never `--delete-branch`, never another merge method. The squash subject is the PR title.
 4. Write `CLOSED` to the state file (§5b) and report the merge commit.

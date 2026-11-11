@@ -296,5 +296,5 @@ comment, flaky/still-failing check, waiting on a maintainer reply) rather than d
 - [ ] No AI-attribution trailers or footers anywhere (§5).
 - [ ] User approved every push before it happened, within the scope they gave, except unasked pushes the
       `--auto` level allows.
-- [ ] Unasked pushes: tier classified from the staged diff, a failed classification treated as high, preconditions
+- [ ] Unasked pushes: tier classified from `git diff @{push}`, a failed classification treated as high, preconditions
       met, caps respected, each reported with SHA and tier. Replies were never unasked (§4 Auto levels).
