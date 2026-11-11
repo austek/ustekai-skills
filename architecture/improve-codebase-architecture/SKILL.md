@@ -1,5 +1,6 @@
 ---
 name: improve-codebase-architecture
+model: opus
 description: Scan codebase for deepening opportunities, present visual HTML report, and grill user on selection.
 disable-model-invocation: true
 ---

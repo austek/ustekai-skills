@@ -1,5 +1,6 @@
 ---
 name: design-doc
+model: opus
 description: >-
   Use when asked to write an ADR, architecture decision, design doc, or technical proposal, to choose between architectural options, or to draw C4, container, component, or sequence diagrams for a proposed change.
 ---

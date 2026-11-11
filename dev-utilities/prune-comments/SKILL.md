@@ -1,5 +1,7 @@
 ---
 name: prune-comments
+context: fork
+model: sonnet
 description: >-
    Zero-tolerance comment eradication and structural refactoring. Enforces a strict
    "code speaks for itself" paradigm. Deletes ALL inline comments. If a comment 

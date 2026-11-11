@@ -1,5 +1,6 @@
 ---
 name: spike
+model: opus
 description: >-
   Use when asked "can we...", "is it feasible", "how far can X go", to POC or evaluate an approach, to time-box an investigation, or to write up spike or POC findings for a ticket or wiki page.
 ---

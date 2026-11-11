@@ -1,5 +1,6 @@
 ---
 name: nuke-comments
+model: haiku
 description: >-
   Mechanically strip every comment from source files in one pass, with zero
   per-comment review or judgment — a fast syntax-driven deletion, not a

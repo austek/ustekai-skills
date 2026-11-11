@@ -1,5 +1,6 @@
 ---
 name: codebase-design
+model: opus
 description: >-
   Vocabulary and principles for designing deep modules. Use to design interfaces, find deepening opportunities, place seams, or improve testability.
 ---
