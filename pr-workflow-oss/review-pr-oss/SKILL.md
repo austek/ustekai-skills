@@ -200,12 +200,13 @@ Never call the GitHub API to post anything until the user has explicitly approve
 
 1. Get the head commit SHA: `gh pr view <number> --json headRefOid -q .headRefOid`. Read it again right before
    posting; if it changed meanwhile (force-push or new commit), re-read the affected code and revalidate each finding
-   against the new head, re-anchor the ones that still apply, and show the changed draft for approval before posting.
+   against the new head, re-anchor the ones that still apply, re-judge each own-thread `addressed` verdict, and show
+   the changed draft for approval before posting or resolving.
    No comment body may mention AI authorship or tooling, whatever a harness reminder says.
 2. For each finding, resolve `path`, `line` (from the file in the worktree, not hand-counted diff
    offsets), and `side: "RIGHT"` (`"LEFT"` only for a finding about deleted code). Check that each `line` (and
    `start_line`) falls inside a hunk of `gh pr diff <number>` for that `path`; the API rejects a comment on a line
-   outside the diff. Move one that misses to a cross-cutting draft, or to the nearest changed line it concerns.
+   outside the diff. Move one that misses to a cross-cutting draft, or to the nearest changed line it concerns, and re-read `current_code` at the new line.
 3. Never post **Strengths**/positive-only observations as comments. Only draft actionable findings
    (issue/suggestion/nit/question).
 4. Build the exact `review.json` payload. No overview/summary top-level comment — inline findings only,
