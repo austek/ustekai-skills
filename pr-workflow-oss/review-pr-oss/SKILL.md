@@ -248,9 +248,10 @@ Only after approval:
    finding individually via `gh api repos/<owner>/<repo>/pulls/<number>/comments` instead.
 2. Post any approved top-level-only findings via `gh pr comment`.
 3. Resolve each approved `addressed` thread of mine, one at a time. First reply on the thread with
-   `Fixed in <sha>` (`<sha>` = the head commit that fixes it) when the thread's `path` is in the `<huntBase>...<head>` diff,
-   otherwise `No longer reported at <sha>`; then resolve it:
+   `Fixed in <head>` (the abbreviated head SHA) when the thread's `path` is in the `<huntBase>...<head>` diff,
+   otherwise `No longer reported at <head>`; then resolve it:
    ```bash
+   gh api graphql -f query='mutation($id:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$id,body:$body}){comment{id}}}' -f id=<threadId> -f body='Fixed in <head>'
    gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -f id=<threadId>
    ```
    Re-check `isResolved` is still false and the thread's first comment is still by `<me>` right before each call.
