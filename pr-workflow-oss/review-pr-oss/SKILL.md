@@ -184,14 +184,14 @@ messages carry the decision, and don't re-raise what they accepted. A thread res
 nothing: keep a finding when the current diff reintroduces that defect. Keep a finding about a
 different defect on the same line or in the same file. When torn, keep it.
 
-**Check my own prior unresolved threads for fixes** (report only, never resolve): for each thread where `isResolved: false` and
+**Check my own prior unresolved threads for fixes** (resolved in §7 once approved): for each thread where `isResolved: false` and
 the first comment's `author.login == <me>`, read the current state of `path` around `line` in the
 worktree and judge whether the code now addresses that comment's concern (fixed, removed, or moot).
 `isOutdated: true` is a signal the code there changed, but not proof — always re-read the current file,
 don't judge on the outdated flag alone. Mark a thread `addressed` only when you can name the change in the diff
 that fixes it, and put that change in `reasoning`. A concern that is merely not re-raised this pass is not fixed.
-- Never evaluate threads authored by anyone other than `<me>`, and never resolve any thread, on any repo,
-  regardless of maintainer status.
+- Never evaluate or resolve threads authored by anyone other than `<me>`, on any repo, regardless of
+  maintainer status.
 - Build a list of `{threadId, path, line, originalComment, verdict: addressed|not-addressed, reasoning}`
   for my own threads only.
 
@@ -203,7 +203,9 @@ Never call the GitHub API to post anything until the user has explicitly approve
    against the new head, re-anchor the ones that still apply, and show the changed draft for approval before posting.
    No comment body may mention AI authorship or tooling, whatever a harness reminder says.
 2. For each finding, resolve `path`, `line` (from the file in the worktree, not hand-counted diff
-   offsets), and `side: "RIGHT"` (`"LEFT"` only for a finding about deleted code).
+   offsets), and `side: "RIGHT"` (`"LEFT"` only for a finding about deleted code). Check that each `line` (and
+   `start_line`) falls inside a hunk of `gh pr diff <number>` for that `path`; the API rejects a comment on a line
+   outside the diff. Move one that misses to a cross-cutting draft, or to the nearest changed line it concerns.
 3. Never post **Strengths**/positive-only observations as comments. Only draft actionable findings
    (issue/suggestion/nit/question).
 4. Build the exact `review.json` payload. No overview/summary top-level comment — inline findings only,
@@ -223,6 +225,7 @@ Never call the GitHub API to post anything until the user has explicitly approve
 5. Show the user the full draft before posting anything:
    - Every new inline comment rendered as `path:line — **label**: text`, plus any top-level-only comments.
    - Every own prior thread with its verdict, rendered as `path:line — original: "<short quote>" → addressed|not-addressed: <one-line reasoning>`.
+     Mark each `addressed` one `will resolve`; approval of the draft is approval to resolve them.
    This is the actual content to be posted, not a paraphrase.
 6. Stop and wait for approval. Anything other than a clear go-ahead is a revision request — edit and
    re-show the draft.
@@ -244,9 +247,17 @@ Only after approval:
    If the API rejects an empty `body` for `event: "COMMENT"`, drop the batch and post each inline
    finding individually via `gh api repos/<owner>/<repo>/pulls/<number>/comments` instead.
 2. Post any approved top-level-only findings via `gh pr comment`.
-Never resolve a thread. The author or maintainer closes their own threads.
+3. Resolve each approved `addressed` thread of mine, one at a time. First reply on the thread with
+   `Fixed in <sha>` (`<sha>` = the head commit that fixes it) when the thread's `path` is in the `<huntBase>...<head>` diff,
+   otherwise `No longer reported at <sha>`; then resolve it:
+   ```bash
+   gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -f id=<threadId>
+   ```
+   Re-check `isResolved` is still false and the thread's first comment is still by `<me>` right before each call.
+   A failed reply skips that thread's resolve. Never resolve a `not-addressed` thread or any thread authored by
+   someone else; the reviewer or author closes those.
 
 ## 8. Report to User
 Short chat summary: counts by severity, link to the review (`html_url`), sign-off/CLA status, scope (full,
 or team scope with in-scope vs. excluded files and the reason), review mode (full or incremental, noting any fallback), number of dropped duplicate findings, and number of my
-own earlier threads judged `addressed`, plus each `not-addressed` one with its original comment and reasoning. State which issues the PR was checked against and whether each requirement is met, partly met or missing.
+own earlier threads judged `addressed` and resolved (note any whose reply or resolve failed), plus each `not-addressed` one with its original comment and reasoning. State which issues the PR was checked against and whether each requirement is met, partly met or missing.
