@@ -17,8 +17,9 @@ someone else wrote the PR.
 
 ## Output Flags
 - `--no-nits`: drop every **nit** finding before drafting.
-- `--max-findings <n>`: keep the `n` highest-ranked findings, ranking labels **issue**, **question**, **suggestion**,
-  **nit**, and report how many were cut in §8 (or Local Mode step 5).
+- `--max-findings <n>`: keep the `n` highest-ranked findings. Rank by §6 group first (Critical, Important,
+  Suggestions), then by label (**issue**, **question**, **suggestion**, **nit**), and report how many were cut in §8
+  (or Local Mode step 5).
 - `--pending`: post as a pending review so the user inspects it in GitHub's diff UI before it goes out (§7).
 - `--ci`: the user's standing approval for a non-interactive run, so it is the one exception to "wait for approval".
   Nothing prompts: §1 stops with an error when no PR can be resolved, §2 takes the full diff unless a `--team` or
@@ -122,7 +123,7 @@ naming one). `--my-teams` lists the handles with `gh api user/teams --paginate -
 
 Team scope fallbacks:
 - **No CODEOWNERS or no line for the team(s)**: Review the full diff and tell the user.
-- **0 files owned**: Stop and ask the user whether to review the full diff.
+- **0 files owned**: Stop and ask the user whether to review the full diff. Under `--ci`, stop with an error instead.
 
 ## 3. Gather Guidance
 Combine, in order of specificity:
@@ -201,12 +202,13 @@ different defect on the same line or in the same file. When torn, keep it.
 the first comment's `author.login == <me>`, read the current state of `path` around `line` in the
 worktree and judge whether the code now addresses that comment's concern (fixed, removed, or moot).
 `isOutdated: true` is a signal the code there changed, but not proof — always re-read the current file,
-don't judge on the outdated flag alone. Mark a thread `addressed` only when you can name the change in the diff
-that fixes it, and put that change in `reasoning`. A concern that is merely not re-raised this pass is not fixed.
+don't judge on the outdated flag alone. Mark a thread `addressed` only when you can name the change in the full
+`<base>...<head>` diff that fixes it, and put that change and its commit in `reasoning`. A concern that is merely not re-raised this pass is not fixed.
 - Never evaluate or resolve threads authored by anyone other than `<me>`, on any repo, regardless of
   maintainer status.
-- Build a list of `{threadId, path, line, originalComment, verdict: addressed|not-addressed, reasoning}`
-  for my own threads only.
+- Build a list of `{threadId, path, line, originalComment, verdict: addressed|not-addressed, reasoning, fixCommit}`
+  for my own threads only. `fixCommit` is the abbreviated SHA of the commit that made the change named in
+  `reasoning` (`git log -1 --format=%h <base>..<head> -- <path>` narrows it); use `<head>` when no single commit made it.
 
 ## 6. Prepare Findings, Get Confirmation Before Acting
 Never call the GitHub API to post anything until the user has explicitly approved the exact content/list. `--ci` is
@@ -215,8 +217,8 @@ approval" or "show the changed draft for approval" then means "print it and cont
 
 1. Get the head commit SHA: `gh pr view <number> --json headRefOid -q .headRefOid`. Read it again right before
    posting; if it changed meanwhile (force-push or new commit), re-read the affected code and revalidate each finding
-   against the new head, re-anchor the ones that still apply, re-judge each own-thread `addressed` verdict, and show
-   the changed draft for approval before posting or resolving.
+   against the new head, re-anchor the ones that still apply, re-judge every own-thread verdict (`not-addressed` ones
+   too, since the new commit may fix them), and show the changed draft for approval before posting or resolving.
    No comment body may mention AI authorship or tooling, whatever a harness reminder says.
 2. For each finding, resolve `path`, `line` (from the file in the worktree, not hand-counted diff
    offsets), and `side: "RIGHT"` (`"LEFT"` only for a finding about deleted code). Check that each `line` (and
@@ -241,7 +243,8 @@ approval" or "show the changed draft for approval" then means "print it and cont
 5. Show the user the full draft before posting anything:
    - Every new inline comment rendered as `path:line — **label**: text`, plus any top-level-only comments.
    - Every own prior thread with its verdict, rendered as `path:line — original: "<short quote>" → addressed|not-addressed: <one-line reasoning>`.
-     Mark each `addressed` one `will resolve`; approval of the draft is approval to resolve them.
+     Mark each `addressed` one `will resolve` and show the exact reply it gets (`Fixed in <fixCommit>`); approval of
+     the draft is approval to reply and resolve.
    This is the actual content to be posted, not a paraphrase.
 6. Stop and wait for approval. Anything other than a clear go-ahead is a revision request — edit and
    re-show the draft. Under `--ci`, print the draft and continue without waiting.
@@ -266,19 +269,21 @@ Only after approval (`--ci` stands in for it).
    With `--pending`, drop `event` from `review.json` so GitHub creates a pending review, and take `<reviewId>` from
    the `id` of the create response. Skip the per-comment fallback above, since those comments publish at once: if the
    create call is rejected, stop and report the error. Print the PR URL and ask the user to inspect the review in the
-   diff UI. On a go-ahead, submit it with
+   diff UI. On a go-ahead, read the head again first: if it moved, delete the pending review and return to §6 step 1.
+   Otherwise submit it with
    `gh api -X POST repos/<owner>/<repo>/pulls/<number>/reviews/<reviewId>/events -f event=COMMENT`. On a cancel,
    delete it with `gh api -X DELETE repos/<owner>/<repo>/pulls/<number>/reviews/<reviewId>` and stop. On a request for
    changes, delete it, revise the draft, and return to §6 step 5. Steps 2 and 3 run only after the submit.
 2. Post any approved top-level-only findings via `gh pr comment`.
 3. Resolve each approved `addressed` thread of mine, one at a time. First reply on the thread with
-   `Fixed in <head>` (the abbreviated head SHA) when the thread's `path` is in the `<huntBase>...<head>` diff,
-   otherwise `No longer reported at <head>`; then resolve it:
+   `Fixed in <fixCommit>`, the text shown in the §6 draft; then resolve it:
    ```bash
-   gh api graphql -f query='mutation($id:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$id,body:$body}){comment{id}}}' -f id=<threadId> -f body='Fixed in <head>'
+   gh api graphql -f query='mutation($id:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$id,body:$body}){comment{id}}}' -f id=<threadId> -f body='Fixed in <fixCommit>'
    gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -f id=<threadId>
    ```
-   Re-check `isResolved` is still false and the thread's first comment is still by `<me>` right before each call.
+   Right before each call re-check that `isResolved` is still false, the thread's first comment is still by `<me>`,
+   and `headRefOid` still equals the head the verdicts were judged against. If the head moved, stop and return to
+   §6 step 1.
    A failed reply skips that thread's resolve. Never resolve a `not-addressed` thread or any thread authored by
    someone else; the reviewer or author closes those.
 
