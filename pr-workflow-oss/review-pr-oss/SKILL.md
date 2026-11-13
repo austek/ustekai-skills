@@ -282,8 +282,9 @@ Only after approval (`--ci` stands in for it).
    gh api graphql -f query='mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{isResolved}}}' -f id=<threadId>
    ```
    Right before each call re-check that `isResolved` is still false, the thread's first comment is still by `<me>`,
-   and `headRefOid` still equals the head the verdicts were judged against. If the head moved, stop and return to
-   §6 step 1.
+   and `headRefOid` still equals the head the verdicts were judged against. If the head moved, stop. Steps 1 and 2
+   are done, so do not return to §6 for them: re-judge only the threads not yet replied to, show their replies for
+   approval, and resume step 3 for those alone.
    A failed reply skips that thread's resolve. Never resolve a `not-addressed` thread or any thread authored by
    someone else; the reviewer or author closes those.
 
