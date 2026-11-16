@@ -78,21 +78,28 @@ def test_without_a_pane_loop_claude_runs_bare(tmp_path):
     assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", "claude", "--remote-control", "my repo"]
 
 
-def test_claude_runs_under_the_env_loader_outside_the_pane_loop(tmp_path):
+def test_claude_runs_under_the_env_loader_which_wraps_the_account_env(tmp_path):
     command, _, fake_bin = _start(tmp_path, loop_on_path=True, env_load_on_path=True)
-    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", str(fake_bin / "claude-env-load"),
+    assert command == [str(fake_bin / "claude-env-load"), "env", "-u", "CLAUDE_CONFIG_DIR",
                        str(fake_bin / "claude-pane-loop"), "claude", "--remote-control", "my repo"]
 
 
 def test_the_env_loader_is_found_in_the_dotfiles_bin(tmp_path):
     command, home, _ = _start(tmp_path, env_load_in_home=True)
-    assert command[:4] == ["env", "-u", "CLAUDE_CONFIG_DIR", str(home / ".dotfiles" / "bin" / "claude-env-load")]
+    assert command[:2] == [str(home / ".dotfiles" / "bin" / "claude-env-load"), "env"]
 
 
 def test_server_runs_under_the_env_loader(tmp_path):
     command, _, fake_bin = _start(tmp_path, loop_on_path=True, env_load_on_path=True, extra=("--server",))
-    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", str(fake_bin / "claude-env-load"),
+    assert command == [str(fake_bin / "claude-env-load"), "env", "-u", "CLAUDE_CONFIG_DIR",
                        "claude", "remote-control", "--name", "my repo"]
+
+
+def test_a_config_dir_from_secrets_cannot_override_the_chosen_account(tmp_path):
+    config_dir = tmp_path / "acct"
+    config_dir.mkdir()
+    command, _, fake_bin = _start(tmp_path, env_load_on_path=True, extra=("--config-dir", str(config_dir)))
+    assert command[:3] == [str(fake_bin / "claude-env-load"), "env", f"CLAUDE_CONFIG_DIR={config_dir}"]
 
 
 def test_the_account_env_stays_outside_the_loop_so_a_resumed_claude_keeps_it(tmp_path):

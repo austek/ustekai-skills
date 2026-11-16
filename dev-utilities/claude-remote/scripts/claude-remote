@@ -161,11 +161,13 @@ esac
 if tmux has-session -t "$session" 2>/dev/null; then
   echo "reusing session $session"
 else
-  args=(env)
-  if [[ -n "$config_dir" ]]; then args+=("CLAUDE_CONFIG_DIR=$config_dir"); else args+=(-u CLAUDE_CONFIG_DIR); fi
-  # claude-env-load exports ~/.config/dotfiles/secrets.env; tmux panes never read the shell profile.
+  # claude-env-load exports ~/.config/dotfiles/secrets.env (tmux panes never read the shell profile); it runs
+  # first so the env below decides the account even when the file sets CLAUDE_CONFIG_DIR.
+  args=()
   env_load="$(find_helper claude-env-load)"
   [[ -z "$env_load" ]] || args+=("$env_load")
+  args+=(env)
+  if [[ -n "$config_dir" ]]; then args+=("CLAUDE_CONFIG_DIR=$config_dir"); else args+=(-u CLAUDE_CONFIG_DIR); fi
   # The server has no single conversation to resume, so it runs without the loop.
   if (( server )); then
     args+=(claude remote-control --name "$name")
