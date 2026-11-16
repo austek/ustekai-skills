@@ -105,6 +105,42 @@ def test_spawn_without_server_or_with_a_bad_mode_exits_64(tmp_path, extra):
     assert result.returncode == 64
 
 
+def test_a_server_never_shares_a_name_with_a_plain_session_on_a_sibling_dir(tmp_path):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    _executable(fake_bin / "tmux", RECORD_TMUX)
+    (tmp_path / "x" / "repo").mkdir(parents=True)
+    (tmp_path / "x" / "repo-server").mkdir()
+    env = {"PATH": f"{fake_bin}:/usr/bin:/bin", "HOME": str(tmp_path / "home"), "TMUX_LOG": str(tmp_path / "tmux.log"),
+           "CLAUDE_REMOTE_SETTINGS": str(tmp_path / "missing.json")}
+
+    def name(*args):
+        out = subprocess.run([str(SCRIPT), *args], env=env, capture_output=True, text=True, check=True).stdout
+        return next(line for line in out.splitlines() if line.startswith("started session ")).split()[-1]
+
+    server = name("--server", "--name", "repo", str(tmp_path / "x" / "repo"))
+    plain = name("--name", "repo-server", str(tmp_path / "x" / "repo-server"))
+    assert server.rsplit("-", 1)[0] == plain.rsplit("-", 1)[0]
+    assert server != plain
+
+
+def test_install_boot_bakes_server_and_spawn_into_a_suffixed_unit(tmp_path):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    for tool in ("systemctl", "loginctl"):
+        _executable(fake_bin / tool)
+    home = tmp_path / "home"
+    home.mkdir()
+    (tmp_path / "repo").mkdir()
+    env = {"PATH": f"{fake_bin}:/usr/bin:/bin", "HOME": str(home), "USER": "tester",
+           "CLAUDE_REMOTE_SETTINGS": str(tmp_path / "missing.json")}
+    args = ["--install-boot", "--server", "--spawn", "same-dir", str(tmp_path / "repo")]
+    subprocess.run([str(SCRIPT), *args], env=env, capture_output=True, text=True, check=True)
+    (unit,) = (home / ".config" / "systemd" / "user").glob("claude-remote-repo-server-*.service")
+    exec_start = next(line for line in unit.read_text().splitlines() if line.startswith("ExecStart="))
+    assert '"--server" "--spawn" "same-dir"' in exec_start
+
+
 def _session_name(tmp_path, *extra):
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir(exist_ok=True)
