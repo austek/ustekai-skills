@@ -66,8 +66,8 @@ accept_trust() {
   for ((i = 0; i < 20; i++)); do
     pane="$(tmux capture-pane -t "$session" -p 2>/dev/null || true)"
     if (( server )); then
-      [[ "$pane" == *"Connected"* ]] && return 0
       if [[ "$pane" == *"Trust "*"[y/N]"* ]]; then tmux send-keys -t "$session" y Enter; return 0; fi
+      [[ "$pane" == *"Connected"* ]] && return 0
     fi
     if [[ "$pane" == *"trust this folder"* ]]; then
       if [[ "$pane" == *"❯ Yes"* ]]; then tmux send-keys -t "$session" Enter

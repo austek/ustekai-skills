@@ -163,6 +163,11 @@ def test_server_trust_answers_the_y_n_question(tmp_path):
     assert len(keys) == 1 and keys[0].endswith(" y Enter")
 
 
+def test_a_directory_named_connected_still_gets_the_trust_answer(tmp_path):
+    keys = _trust_run(tmp_path, "Trust /tmp/Connected? [y/N]", "--server")
+    assert len(keys) == 1 and keys[0].endswith(" y Enter")
+
+
 def test_server_trust_stops_waiting_once_connected(tmp_path):
     assert _trust_run(tmp_path, "Connected · repo", "--server") == []
 
