@@ -3,7 +3,7 @@
 set -euo pipefail
 
 root="${CLAUDE_REMOTE_ROOT:-$HOME/Workspace}"
-settings="${CLAUDE_REMOTE_SETTINGS:-$HOME/.config/dotfiles/claude-profiles/claude_personal.json}"
+settings="${CLAUDE_REMOTE_SETTINGS:-}"
 config_dir="${CLAUDE_CONFIG_DIR:-}"
 target=""; rc_name=""; trust=0; boot=""; server=0; spawn=""
 
@@ -84,10 +84,10 @@ sd_quote() {
   printf '"%s"' "$s"
 }
 
-find_pane_loop() {
-  local loop
-  for loop in "$(command -v claude-pane-loop || true)" "$HOME/.dotfiles/bin/claude-pane-loop"; do
-    [[ -n "$loop" && -x "$loop" ]] && { realpath -s -- "$loop"; return 0; }
+find_helper() {
+  local helper
+  for helper in "$(command -v "$1" || true)" "$HOME/.dotfiles/bin/$1"; do
+    [[ -n "$helper" && -x "$helper" ]] && { realpath -s -- "$helper"; return 0; }
   done
   return 0
 }
@@ -109,9 +109,12 @@ install_boot() {
   [[ -n "$config_dir" ]] || unset_line=$'UnsetEnvironment=CLAUDE_CONFIG_DIR\n'
   mkdir -p "${unit%/*}"
   {
-    printf '[Unit]\nDescription=Claude remote-control %s %s\nAfter=network-online.target\n\n' "$kind" "$name"
-    printf '[Service]\nType=oneshot\nRemainAfterExit=yes\nKillMode=process\n'
-    printf 'Environment=%s\nEnvironment=%s\n' "$(sd_quote "PATH=$PATH")" "$(sd_quote "CLAUDE_REMOTE_SETTINGS=$settings")"
+    printf '[Unit]\nDescription=Claude remote-control %s %s\nAfter=network-online.target\nWants=network-online.target\n\n' "$kind" "$name"
+    printf '[Service]\nType=oneshot\nRemainAfterExit=yes\nKillMode=process\nTimeoutStartSec=300\nRestart=on-failure\nRestartSec=30\n'
+    printf 'Environment=%s\n' "$(sd_quote "PATH=$PATH")"
+    [[ -z "$settings" ]] || printf 'Environment=%s\n' "$(sd_quote "CLAUDE_REMOTE_SETTINGS=$settings")"
+    # Without the wait, Remote Control fails session creation at boot: the link gains carrier before DNS works.
+    printf 'ExecStartPre=/usr/bin/env curl -s --retry 30 --retry-delay 2 --retry-all-errors --max-time 5 -o /dev/null https://api.anthropic.com\n'
     printf '%s' "$unset_line"
     printf 'ExecStart=%s' "$(sd_quote "${bin//\$/\$\$}")"
     for a in "${exec_args[@]}"; do printf ' %s' "$(sd_quote "${a//\$/\$\$}")"; done
@@ -160,6 +163,9 @@ if tmux has-session -t "$session" 2>/dev/null; then
 else
   args=(env)
   if [[ -n "$config_dir" ]]; then args+=("CLAUDE_CONFIG_DIR=$config_dir"); else args+=(-u CLAUDE_CONFIG_DIR); fi
+  # claude-env-load exports ~/.config/dotfiles/secrets.env; tmux panes never read the shell profile.
+  env_load="$(find_helper claude-env-load)"
+  [[ -z "$env_load" ]] || args+=("$env_load")
   # The server has no single conversation to resume, so it runs without the loop.
   if (( server )); then
     args+=(claude remote-control --name "$name")
@@ -167,11 +173,11 @@ else
   else
     # The loop keeps the pane after claude exits so Cozempic's typed resume line restarts it; env stays outside
     # it so the resumed claude keeps the account.
-    loop="$(find_pane_loop)"
+    loop="$(find_helper claude-pane-loop)"
     [[ -z "$loop" ]] || args+=("$loop")
     args+=(claude --remote-control "$name")
   fi
-  [[ -f "$settings" ]] && args+=(--settings "$settings")
+  [[ -n "$settings" && -f "$settings" ]] && args+=(--settings "$settings")
   tmux new-session -d -s "$session" -c "$path" "$(printf '%q ' "${args[@]}")"
   echo "started session $session"
   (( trust )) && accept_trust
