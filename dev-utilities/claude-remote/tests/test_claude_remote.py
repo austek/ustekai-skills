@@ -81,6 +81,48 @@ def test_the_account_env_stays_outside_the_loop_so_a_resumed_claude_keeps_it(tmp
     assert command[:3] == ["env", f"CLAUDE_CONFIG_DIR={config_dir}", str(fake_bin / "claude-pane-loop")]
 
 
+def test_server_runs_the_subcommand_without_the_pane_loop(tmp_path):
+    command, _, _ = _start(tmp_path, loop_on_path=True, extra=("--server",))
+    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", "claude", "remote-control", "--name", "my repo"]
+
+
+def test_server_keeps_the_account_env(tmp_path):
+    config_dir = tmp_path / "acct"
+    config_dir.mkdir()
+    command, _, _ = _start(tmp_path, extra=("--server", "--config-dir", str(config_dir)))
+    assert command[:5] == ["env", f"CLAUDE_CONFIG_DIR={config_dir}", "claude", "remote-control", "--name"]
+
+
+def test_spawn_mode_is_passed_to_the_server(tmp_path):
+    command, _, _ = _start(tmp_path, extra=("--server", "--spawn", "same-dir"))
+    assert command[-2:] == ["--spawn", "same-dir"]
+
+
+@pytest.mark.parametrize("extra", [("--spawn", "same-dir"), ("--server", "--spawn", "bogus")])
+def test_spawn_without_server_or_with_a_bad_mode_exits_64(tmp_path, extra):
+    (tmp_path / "repo").mkdir()
+    result = subprocess.run([str(SCRIPT), *extra, str(tmp_path / "repo")], capture_output=True, text=True, check=False)
+    assert result.returncode == 64
+
+
+def _session_name(tmp_path, *extra):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir(exist_ok=True)
+    _executable(fake_bin / "tmux", RECORD_TMUX)
+    (tmp_path / "repo").mkdir(exist_ok=True)
+    env = {"PATH": f"{fake_bin}:/usr/bin:/bin", "HOME": str(tmp_path / "home"), "TMUX_LOG": str(tmp_path / "tmux.log"),
+           "CLAUDE_REMOTE_SETTINGS": str(tmp_path / "missing.json")}
+    out = subprocess.run([str(SCRIPT), *extra, str(tmp_path / "repo")], env=env, capture_output=True, text=True, check=True)
+    return next(line for line in out.stdout.splitlines() if line.startswith("started session ")).split()[-1]
+
+
+def test_server_and_session_for_one_repo_get_distinct_tmux_names(tmp_path):
+    plain = _session_name(tmp_path)
+    server = _session_name(tmp_path, "--server")
+    assert server.startswith("claude-repo-server-")
+    assert plain != server
+
+
 @pytest.mark.skipif(shutil.which("shellcheck") is None, reason="shellcheck not installed")
 def test_script_passes_shellcheck():
     result = subprocess.run(["shellcheck", str(SCRIPT)], capture_output=True, text=True, check=False)

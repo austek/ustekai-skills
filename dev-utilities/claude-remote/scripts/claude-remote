@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-# Usage: claude-remote [--root DIR] [--name NAME] [--config-dir DIR] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>
+# Usage: claude-remote [--root DIR] [--name NAME] [--config-dir DIR] [--server [--spawn MODE]] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>
 set -euo pipefail
 
 root="${CLAUDE_REMOTE_ROOT:-$HOME/Workspace}"
 settings="${CLAUDE_REMOTE_SETTINGS:-$HOME/.config/dotfiles/claude-profiles/claude_personal.json}"
 config_dir="${CLAUDE_CONFIG_DIR:-}"
-target=""; rc_name=""; trust=0; boot=""
+target=""; rc_name=""; trust=0; boot=""; server=0; spawn=""
 
 while (( $# )); do
   case "$1" in
     --root) root="${2:?--root needs a directory}"; shift 2 ;;
     --config-dir) config_dir="${2:?--config-dir needs a directory}"; shift 2 ;;
     --name) rc_name="${2:?--name needs a value}"; shift 2 ;;
+    --server) server=1; shift ;;
+    --spawn) spawn="${2:?--spawn needs a mode}"; shift 2 ;;
     --trust) trust=1; shift ;;
     --install-boot) boot=install; shift ;;
     --uninstall-boot) boot=uninstall; shift ;;
@@ -19,7 +21,12 @@ while (( $# )); do
     *) target="$1"; shift ;;
   esac
 done
-[[ -n "$target" ]] || { echo "usage: claude-remote [--root DIR] [--name NAME] [--config-dir DIR] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>" >&2; exit 64; }
+[[ -n "$target" ]] || { echo "usage: claude-remote [--root DIR] [--name NAME] [--config-dir DIR] [--server [--spawn MODE]] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>" >&2; exit 64; }
+case "$spawn" in
+  ""|same-dir|worktree|session) ;;
+  *) echo "--spawn must be same-dir, worktree or session" >&2; exit 64 ;;
+esac
+[[ -z "$spawn" ]] || (( server )) || { echo "--spawn needs --server" >&2; exit 64; }
 
 root="${root/#\~/$HOME}"
 config_dir="${config_dir/#\~/$HOME}"
@@ -89,6 +96,8 @@ install_boot() {
   mkdir -p "${bin%/*}"
   # The unit runs a copy outside the versioned plugin cache so plugin updates cannot break it.
   install -m 755 "$(realpath "$0")" "$bin"
+  (( server )) && exec_args+=(--server)
+  [[ -z "$spawn" ]] || exec_args+=(--spawn "$spawn")
   (( trust )) && exec_args+=(--trust)
   [[ -n "$config_dir" ]] && exec_args+=(--config-dir "$config_dir")
   exec_args+=("$path")
@@ -96,7 +105,7 @@ install_boot() {
   [[ -n "$config_dir" ]] || unset_line=$'UnsetEnvironment=CLAUDE_CONFIG_DIR\n'
   mkdir -p "${unit%/*}"
   {
-    printf '[Unit]\nDescription=Claude remote-control session %s\nAfter=network-online.target\n\n' "$name"
+    printf '[Unit]\nDescription=Claude remote-control %s %s\nAfter=network-online.target\n\n' "$kind" "$name"
     printf '[Service]\nType=oneshot\nRemainAfterExit=yes\nKillMode=process\n'
     printf 'Environment=%s\nEnvironment=%s\n' "$(sd_quote "PATH=$PATH")" "$(sd_quote "CLAUDE_REMOTE_SETTINGS=$settings")"
     printf '%s' "$unset_line"
@@ -132,8 +141,10 @@ name="${rc_name:-${path##*/}}"
 [[ "$name$path" != *$'\n'* && "$name$path" != *$'\r'* ]] || { echo "name or path contains a line break" >&2; exit 64; }
 [[ -z "$rc_name" || "$rc_name" == "${rc_name//[^A-Za-z0-9_-]/_}" ]] \
   || { echo "--name may only contain letters, digits, '_' and '-'" >&2; exit 64; }
-hash="$(printf %s "$path${config_dir:+$'\n'$config_dir}" | sha1sum | cut -c1-6)"
-session="claude-${name//[^A-Za-z0-9_-]/_}-$hash"
+kind=session; suffix=""
+if (( server )); then kind=server; suffix="-server"; fi
+hash="$(printf %s "$path${config_dir:+$'\n'$config_dir}$suffix" | sha1sum | cut -c1-6)"
+session="claude-${name//[^A-Za-z0-9_-]/_}$suffix-$hash"
 
 case "$boot" in
   install) install_boot; exit 0 ;;
@@ -147,9 +158,15 @@ else
   if [[ -n "$config_dir" ]]; then args+=("CLAUDE_CONFIG_DIR=$config_dir"); else args+=(-u CLAUDE_CONFIG_DIR); fi
   # The loop keeps the pane after claude exits so Cozempic's typed resume line restarts it; env stays outside
   # it so the resumed claude keeps the account.
-  loop="$(find_pane_loop)"
-  [[ -z "$loop" ]] || args+=("$loop")
-  args+=(claude --remote-control "$name")
+  # The server has no single conversation to resume, so it runs without the loop.
+  if (( server )); then
+    args+=(claude remote-control --name "$name")
+    [[ -z "$spawn" ]] || args+=(--spawn "$spawn")
+  else
+    loop="$(find_pane_loop)"
+    [[ -z "$loop" ]] || args+=("$loop")
+    args+=(claude --remote-control "$name")
+  fi
   [[ -f "$settings" ]] && args+=(--settings "$settings")
   tmux new-session -d -s "$session" -c "$path" "$(printf '%q ' "${args[@]}")"
   echo "started session $session"
