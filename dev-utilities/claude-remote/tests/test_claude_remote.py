@@ -14,7 +14,7 @@ def _executable(path: Path, body: str = "#!/bin/sh\n") -> None:
     path.chmod(0o755)
 
 
-def _start(tmp_path, *, loop_on_path=False, loop_in_home=False, extra=()):
+def _start(tmp_path, *, loop_on_path=False, loop_in_home=False, env_load_on_path=False, env_load_in_home=False, extra=()):
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     _executable(fake_bin / "tmux", RECORD_TMUX)
@@ -24,6 +24,10 @@ def _start(tmp_path, *, loop_on_path=False, loop_in_home=False, extra=()):
         _executable(fake_bin / "claude-pane-loop")
     if loop_in_home:
         _executable(home / ".dotfiles" / "bin" / "claude-pane-loop")
+    if env_load_on_path:
+        _executable(fake_bin / "claude-env-load")
+    if env_load_in_home:
+        _executable(home / ".dotfiles" / "bin" / "claude-env-load")
     repo = tmp_path / "my repo"
     repo.mkdir()
     env = {
@@ -72,6 +76,23 @@ def test_a_relative_path_entry_still_yields_an_absolute_loop_path(tmp_path):
 def test_without_a_pane_loop_claude_runs_bare(tmp_path):
     command, _, _ = _start(tmp_path)
     assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", "claude", "--remote-control", "my repo"]
+
+
+def test_claude_runs_under_the_env_loader_outside_the_pane_loop(tmp_path):
+    command, _, fake_bin = _start(tmp_path, loop_on_path=True, env_load_on_path=True)
+    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", str(fake_bin / "claude-env-load"),
+                       str(fake_bin / "claude-pane-loop"), "claude", "--remote-control", "my repo"]
+
+
+def test_the_env_loader_is_found_in_the_dotfiles_bin(tmp_path):
+    command, home, _ = _start(tmp_path, env_load_in_home=True)
+    assert command[:4] == ["env", "-u", "CLAUDE_CONFIG_DIR", str(home / ".dotfiles" / "bin" / "claude-env-load")]
+
+
+def test_server_runs_under_the_env_loader(tmp_path):
+    command, _, fake_bin = _start(tmp_path, loop_on_path=True, env_load_on_path=True, extra=("--server",))
+    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", str(fake_bin / "claude-env-load"),
+                       "claude", "remote-control", "--name", "my repo"]
 
 
 def test_the_account_env_stays_outside_the_loop_so_a_resumed_claude_keeps_it(tmp_path):
@@ -139,6 +160,10 @@ def test_install_boot_bakes_server_and_spawn_into_a_suffixed_unit(tmp_path):
     (unit,) = (home / ".config" / "systemd" / "user").glob("claude-remote-repo-server-*.service")
     exec_start = next(line for line in unit.read_text().splitlines() if line.startswith("ExecStart="))
     assert '"--server" "--spawn" "same-dir"' in exec_start
+    text = unit.read_text()
+    assert "Wants=network-online.target" in text
+    assert "ExecStartPre=/usr/bin/env curl" in text and "https://api.anthropic.com" in text
+    assert "Restart=on-failure" in text
 
 
 def _trust_run(tmp_path, pane_text, *extra):
