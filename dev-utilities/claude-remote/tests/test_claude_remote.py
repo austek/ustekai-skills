@@ -141,6 +141,42 @@ def test_install_boot_bakes_server_and_spawn_into_a_suffixed_unit(tmp_path):
     assert '"--server" "--spawn" "same-dir"' in exec_start
 
 
+def _trust_run(tmp_path, pane_text, *extra):
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    _executable(
+        fake_bin / "tmux",
+        '#!/bin/sh\ncase "$1" in\n  has-session) exit 1 ;;\n  capture-pane) printf "%s\\n" "$PANE_TEXT" ;;\n'
+        '  send-keys) printf "%s\\n" "$*" >> "$KEYS_LOG" ;;\nesac\n',
+    )
+    _executable(fake_bin / "sleep")
+    (tmp_path / "repo").mkdir()
+    env = {"PATH": f"{fake_bin}:/usr/bin:/bin", "HOME": str(tmp_path / "home"), "PANE_TEXT": pane_text,
+           "KEYS_LOG": str(tmp_path / "keys.log"), "CLAUDE_REMOTE_SETTINGS": str(tmp_path / "missing.json")}
+    subprocess.run([str(SCRIPT), "--trust", *extra, str(tmp_path / "repo")], env=env, capture_output=True, text=True, check=True)
+    keys = tmp_path / "keys.log"
+    return keys.read_text().splitlines() if keys.exists() else []
+
+
+def test_server_trust_answers_the_y_n_question(tmp_path):
+    keys = _trust_run(tmp_path, "Trust /home/x/repo? [y/N]", "--server")
+    assert len(keys) == 1 and keys[0].endswith(" y Enter")
+
+
+def test_a_directory_named_connected_still_gets_the_trust_answer(tmp_path):
+    keys = _trust_run(tmp_path, "Trust /tmp/Connected? [y/N]", "--server")
+    assert len(keys) == 1 and keys[0].endswith(" y Enter")
+
+
+def test_server_trust_stops_waiting_once_connected(tmp_path):
+    assert _trust_run(tmp_path, "Connected · repo", "--server") == []
+
+
+def test_plain_session_trust_still_uses_the_folder_dialog(tmp_path):
+    keys = _trust_run(tmp_path, "Do you trust this folder?\n  1. Yes\n  2. No")
+    assert keys and keys[0].endswith("Down Enter")
+
+
 def _session_name(tmp_path, *extra):
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir(exist_ok=True)
