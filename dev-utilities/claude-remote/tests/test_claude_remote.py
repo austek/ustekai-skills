@@ -80,19 +80,39 @@ def test_without_a_pane_loop_claude_runs_bare(tmp_path):
 
 def test_claude_runs_under_the_env_loader_outside_the_pane_loop(tmp_path):
     command, _, fake_bin = _start(tmp_path, loop_on_path=True, env_load_on_path=True)
-    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", str(fake_bin / "claude-env-load"),
+    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", "CLAUDE_OTEL_ACCOUNT=main", str(fake_bin / "claude-env-load"),
                        str(fake_bin / "claude-pane-loop"), "claude", "--remote-control", "my repo"]
 
 
 def test_the_env_loader_is_found_in_the_dotfiles_bin(tmp_path):
     command, home, _ = _start(tmp_path, env_load_in_home=True)
-    assert command[:4] == ["env", "-u", "CLAUDE_CONFIG_DIR", str(home / ".dotfiles" / "bin" / "claude-env-load")]
+    assert command[:5] == ["env", "-u", "CLAUDE_CONFIG_DIR", "CLAUDE_OTEL_ACCOUNT=main",
+                           str(home / ".dotfiles" / "bin" / "claude-env-load")]
 
 
 def test_server_runs_under_the_env_loader(tmp_path):
     command, _, fake_bin = _start(tmp_path, loop_on_path=True, env_load_on_path=True, extra=("--server",))
-    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", str(fake_bin / "claude-env-load"),
+    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", "CLAUDE_OTEL_ACCOUNT=main", str(fake_bin / "claude-env-load"),
                        "claude", "remote-control", "--name", "my repo"]
+
+
+def test_a_dot_claude_config_dir_names_the_otel_account(tmp_path):
+    config_dir = tmp_path / ".claude-burst"
+    config_dir.mkdir()
+    command, _, _ = _start(tmp_path, env_load_on_path=True, extra=("--config-dir", str(config_dir)))
+    assert command[:3] == ["env", f"CLAUDE_CONFIG_DIR={config_dir}", "CLAUDE_OTEL_ACCOUNT=burst"]
+
+
+def test_an_unrecognised_config_dir_sets_no_otel_account(tmp_path):
+    config_dir = tmp_path / "acct"
+    config_dir.mkdir()
+    command, _, _ = _start(tmp_path, env_load_on_path=True, extra=("--config-dir", str(config_dir)))
+    assert not any(part.startswith("CLAUDE_OTEL_ACCOUNT=") for part in command)
+
+
+def test_without_the_env_loader_no_otel_account_is_set(tmp_path):
+    command, _, _ = _start(tmp_path)
+    assert not any(part.startswith("CLAUDE_OTEL_ACCOUNT=") for part in command)
 
 
 def test_the_account_env_stays_outside_the_loop_so_a_resumed_claude_keeps_it(tmp_path):

@@ -165,7 +165,16 @@ else
   if [[ -n "$config_dir" ]]; then args+=("CLAUDE_CONFIG_DIR=$config_dir"); else args+=(-u CLAUDE_CONFIG_DIR); fi
   # claude-env-load exports ~/.config/dotfiles/secrets.env; tmux panes never read the shell profile.
   env_load="$(find_helper claude-env-load)"
-  [[ -z "$env_load" ]] || args+=("$env_load")
+  if [[ -n "$env_load" ]]; then
+    # claude-env-load turns this into the account's OTel env; an unrecognised config dir gets none.
+    config_base="${config_dir##*/}"
+    if [[ -z "$config_dir" ]]; then otel_account=main
+    elif [[ "$config_base" == .claude-?* ]]; then otel_account="${config_base#.claude-}"
+    else otel_account=
+    fi
+    [[ -z "$otel_account" ]] || args+=("CLAUDE_OTEL_ACCOUNT=$otel_account")
+    args+=("$env_load")
+  fi
   # The server has no single conversation to resume, so it runs without the loop.
   if (( server )); then
     args+=(claude remote-control --name "$name")
