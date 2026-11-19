@@ -1,6 +1,6 @@
 # Kotlin Coding Standards
 
-Idiomatic, coroutine-safe Kotlin for server-side and library code, designed for AI agents and LLMs. Targets Kotlin 2.2 or later on JDK 21+. Load together with [jvm-coding-standards](../jvm-coding-standards/SKILL.md).
+Idiomatic, coroutine-safe Kotlin for server-side and library code, designed for AI agents and LLMs. Load together with [jvm-coding-standards](../jvm-coding-standards/SKILL.md).
 
 ## Overview
 
@@ -67,7 +67,7 @@ kotlin-coding-standards/
 
 ## Sources
 
-Rules follow the Kotlin coding conventions, the kotlinx.coroutines guide and the Kotlin 2.x release notes. Verify version-specific claims against the release you target.
+Rules follow the Kotlin coding conventions, the kotlinx.coroutines guide and the Kotlin release notes.
 
 ## Related
 

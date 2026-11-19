@@ -32,9 +32,13 @@ install(CallLogging) {
 <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
   <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
 </appender>
+<root level="INFO">
+  <appender-ref ref="JSON"/>
+</root>
 ```
 
 ## Notes
+- Place the appender and `<root>` inside `<configuration>` in `logback.xml` and remove any plain-text appender-ref from the root logger.
 - Add the `ktor-server-call-id` and `ktor-server-call-logging` artifacts. The default `verify` accepts only lowercase letters, digits and `+/=-`; set your own `verify` if clients send other characters.
 - MDC is thread-local; coroutines need `MDCContext()` from `kotlinx-coroutines-slf4j` when they hop threads.
 - Return the call id in the `X-Request-Id` response header so clients can quote it.

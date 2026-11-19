@@ -12,6 +12,13 @@ Kotlin has no checked exceptions, so a thrown exception is invisible in the sign
 
 ## Bad Example
 ```kotlin
+data class Money(val cents: Long) : Comparable<Money> {
+    operator fun minus(other: Money) = Money(cents - other.cents)
+    override fun compareTo(other: Money) = cents.compareTo(other.cents)
+}
+data class Account(val balance: Money)
+class InsufficientFunds : RuntimeException()
+
 fun withdraw(account: Account, amount: Money): Account {
     if (amount > account.balance) throw InsufficientFunds() // invisible in the signature
     return account.copy(balance = account.balance - amount)
@@ -20,6 +27,12 @@ fun withdraw(account: Account, amount: Money): Account {
 
 ## Good Example
 ```kotlin
+data class Money(val cents: Long) : Comparable<Money> {
+    operator fun minus(other: Money) = Money(cents - other.cents)
+    override fun compareTo(other: Money) = cents.compareTo(other.cents)
+}
+data class Account(val balance: Money)
+
 sealed interface WithdrawResult {
     data class Ok(val account: Account) : WithdrawResult
     data class InsufficientFunds(val shortBy: Money) : WithdrawResult

@@ -10,18 +10,18 @@ paths:
 
 # Ktor Standards
 
-Framework rules for Ktor 3 servers in Kotlin (current line is 3.6; plugin artifacts such as `ktor-server-call-id` and `ktor-server-test-host` are separate dependencies). Language rules come from [kotlin-coding-standards](../kotlin-coding-standards/SKILL.md) (especially coroutines and sealed types) and runtime rules from [jvm-coding-standards](../jvm-coding-standards/SKILL.md).
+Framework rules for Ktor 3 servers in Kotlin (plugin artifacts such as `ktor-server-call-id` and `ktor-server-test-host` are separate dependencies). Language rules come from [kotlin-coding-standards](../kotlin-coding-standards/SKILL.md) (especially coroutines and sealed types) and runtime rules from [jvm-coding-standards](../jvm-coding-standards/SKILL.md).
 
 ## Categories
 
-### Structure & Configuration [HIGH]
+### Structure & Configuration [HIGH/MEDIUM]
 | Rule | Description |
 |------|-------------|
 | [structure-module-extension-functions](rules/structure-module-extension-functions.md) | Structure a Ktor app as Application.module extensions per feature |
 | [config-typed-application-config](rules/config-typed-application-config.md) | Read configuration once into a typed object from ApplicationConfig |
 | [di-constructor-injection-with-koin-modules](rules/di-constructor-injection-with-koin-modules.md) | Inject dependencies through constructors; confine Koin to the composition root |
 
-### Request Handling [CRITICAL]
+### Request Handling [CRITICAL/HIGH]
 | Rule | Description |
 |------|-------------|
 | [coroutines-no-blocking-in-handlers](rules/coroutines-no-blocking-in-handlers.md) | Never block the event loop in route handlers |

@@ -35,7 +35,7 @@
 **Impact:** MEDIUM
 
 **Rules:**
-- `concurrency-virtual-threads-property` - Enable virtual threads with the Boot property on JDK 21+
+- `concurrency-virtual-threads-property` - Enable virtual threads with the Boot property
 
 ## Observability (observability)
 **Impact:** HIGH

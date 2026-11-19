@@ -12,19 +12,30 @@ Coroutine cancellation is delivered as a `CancellationException`. A `catch (e: E
 
 ## Bad Example
 ```kotlin
-suspend fun refresh() {
+interface Api { suspend fun fetch(): String }
+interface Log { fun warn(msg: String, e: Throwable) }
+
+suspend fun refresh(api: Api, log: Log) {
     try {
         api.fetch()
     } catch (e: Exception) {
         log.warn("refresh failed", e) // also swallows cancellation
     }
 }
-val result = runCatching { api.fetch() } // same problem
+
+suspend fun load(api: Api): Result<String> =
+    runCatching { api.fetch() } // same problem
 ```
 
 ## Good Example
 ```kotlin
-suspend fun refresh() {
+import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
+
+interface Api { suspend fun fetch(): String }
+interface Log { fun warn(msg: String, e: Throwable) }
+
+suspend fun refresh(api: Api, log: Log) {
     try {
         api.fetch()
     } catch (e: CancellationException) {

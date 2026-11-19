@@ -12,24 +12,37 @@ Declare `val`, never `var`, unless the mutation is local and necessary. Model va
 
 ## Bad Example
 ```kotlin
+enum class Status { NEW, PAID }
+data class Item(val sku: String)
 data class Order(var status: Status, var items: MutableList<Item>)
-order.items.add(item)
+
+fun addItem(order: Order, item: Item) {
+    order.items.add(item)
+}
 ```
 
 ## Good Example
 ```kotlin
-@JvmInline value class OrderId(val value: String)
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.plus
 
-data class Order(val id: OrderId, val status: Status, val items: List<Item>) {
+@JvmInline value class OrderId(val value: String)
+enum class Status { NEW, PAID }
+data class Item(val sku: String)
+
+data class Order(
+    val id: OrderId,
+    val status: Status,
+    val items: ImmutableList<Item> = persistentListOf(),
+) {
     fun add(item: Item): Order = copy(items = items + item)
 }
-
-fun order(id: OrderId, status: Status, items: List<Item>) = Order(id, status, items.toList())
 ```
 
 ## Notes
 - A `val` of a `MutableList` type is still mutable; expose `List`, hold the mutable list privately.
-- A `List` parameter can still be a caller-owned `MutableList`. Copy it at the boundary (`toList()`) or use `kotlinx.collections.immutable`, and keep the elements (`Item`) immutable too.
+- A plain `List` property can hold a caller-owned `MutableList`, through the constructor or `copy(items = ...)`. Type the property as `ImmutableList` (`kotlinx.collections.immutable`) so every construction path is safe, and keep the elements (`Item`) immutable too.
 - Validate invariants in `init { require(...) }`. `copy()` re-runs `init`, so invariants hold for derived values too.
 
 ## References

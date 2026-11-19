@@ -12,6 +12,8 @@ tags: [interop, java, annotations]
 
 ## Bad Example
 ```kotlin
+class Doc(val text: String)
+
 internal object Internals {
     @JvmStatic @JvmOverloads fun parse(text: String, strict: Boolean = false): Doc = TODO()
 }
@@ -19,11 +21,14 @@ internal object Internals {
 
 ## Good Example
 ```kotlin
+public class Doc(public val text: String)
+public class ParseException(message: String) : Exception(message)
+
 public object Parser {
     @JvmStatic
     @JvmOverloads
     @Throws(ParseException::class)
-    public fun parse(text: String, strict: Boolean = false): Doc = TODO()
+    public fun parse(text: String, strict: Boolean = false): Doc = Doc(text)
 }
 ```
 

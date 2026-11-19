@@ -17,13 +17,13 @@ Kotlin's coding conventions say to avoid `@param` and `@return` in KDoc: describ
  * @param number The number to return the absolute value for.
  * @return The absolute value.
  */
-fun abs(number: Int): Int
+fun abs(number: Int): Int = if (number < 0) -number else number
 ```
 
 ## Good Example
 ```kotlin
 /** Returns the absolute value of the given [number]; `Int.MIN_VALUE` is returned unchanged. */
-fun abs(number: Int): Int
+fun abs(number: Int): Int = if (number < 0) -number else number
 ```
 
 ## Notes

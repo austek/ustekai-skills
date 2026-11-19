@@ -22,6 +22,10 @@ class HttpClientFactory { // public by accident
 kotlin { explicitApi() }
 ```
 ```kotlin
+public class HttpClient internal constructor()
+
+internal fun buildClient(): HttpClient = HttpClient()
+
 public class HttpClientFactory internal constructor() {
     public fun create(): HttpClient = buildClient()
 }

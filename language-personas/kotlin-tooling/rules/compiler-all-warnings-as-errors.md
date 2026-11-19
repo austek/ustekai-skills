@@ -8,7 +8,7 @@ tags: [compiler, warnings, k2]
 # Treat Kotlin Compiler Warnings as Errors in CI [HIGH]
 
 ## Description
-Enable `allWarningsAsErrors` for the Kotlin compiler (K2; K1 and `-language-version=1.9` are gone in Kotlin 2.4) so a new warning fails the build. Gate it on CI or a `-PwarningsAsErrors` property if local work needs flexibility. Kotlin 2.1+ enforces JSpecify annotations strictly, which covers Spring Framework 7's own API. Keep `-Xjsr305=strict` for libraries that still use JSR-305 annotations.
+Enable `allWarningsAsErrors` for the Kotlin compiler so a new warning fails the build. Gate it on CI or a `-PwarningsAsErrors` property if local work needs flexibility. The compiler enforces JSpecify annotations strictly, which covers Spring Framework's own API. Keep `-Xjsr305=strict` for libraries that still use JSR-305 annotations.
 
 ## Bad Example
 ```kotlin

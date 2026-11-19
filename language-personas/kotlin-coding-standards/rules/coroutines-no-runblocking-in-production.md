@@ -1,23 +1,31 @@
 ---
 title: Do Not Call runBlocking in Production Code
-impact: HIGH
+impact: CRITICAL
 impactDescription: blocks a thread inside code that exists to avoid blocking, causing starvation and deadlocks
 tags: [coroutines, blocking]
 ---
 
-# Do Not Call runBlocking in Production Code [HIGH]
+# Do Not Call runBlocking in Production Code [CRITICAL]
 
 ## Description
 `runBlocking` parks the calling thread until the coroutine finishes. On a dispatcher thread or a server request thread it can starve the pool or deadlock. Keep it to `main()` entry points and test bridges, and make callers `suspend` instead. On Spring MVC with virtual threads, blocking is acceptable and coroutines are optional.
 
 ## Bad Example
 ```kotlin
-fun price(sku: String): Money = runBlocking { client.fetchPrice(sku) }
+import kotlinx.coroutines.runBlocking
+
+data class Money(val cents: Long)
+interface Client { suspend fun fetchPrice(sku: String): Money }
+
+fun price(client: Client, sku: String): Money = runBlocking { client.fetchPrice(sku) }
 ```
 
 ## Good Example
 ```kotlin
-suspend fun price(sku: String): Money = client.fetchPrice(sku)
+data class Money(val cents: Long)
+interface Client { suspend fun fetchPrice(sku: String): Money }
+
+suspend fun price(client: Client, sku: String): Money = client.fetchPrice(sku)
 ```
 
 ## Notes

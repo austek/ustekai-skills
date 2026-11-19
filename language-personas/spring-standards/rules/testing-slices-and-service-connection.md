@@ -22,18 +22,24 @@ class OrderControllerTest {
 
 ## Good Example
 ```java
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
 @WebMvcTest(OrderController.class)
 class OrderControllerTest {
     @Autowired MockMvcTester mvc;
     @MockitoBean OrderService service;
 }
-
+```
+```java
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @DataJpaTest
@@ -50,9 +56,8 @@ class ContainersConfig {
 
 ## Notes
 - Add the `spring-boot-testcontainers` test dependency (and `testcontainers-junit-jupiter` plus the database module) for `@ServiceConnection`.
-- Boot 4 uses Testcontainers 2: the module is `org.testcontainers:testcontainers-postgresql` and `PostgreSQLContainer` is the non-generic `org.testcontainers.postgresql` type (Testcontainers 1 used `org.testcontainers.containers.PostgreSQLContainer<?>`).
+- Boot 4 uses Testcontainers 2: the module is `org.testcontainers:testcontainers-postgresql` and `PostgreSQLContainer` is the non-generic `org.testcontainers.postgresql` type.
 - In Boot 4, `@SpringBootTest` no longer provides `MockMvc`, `TestRestTemplate` or `WebClient` by itself: add `@AutoConfigureMockMvc`, `@AutoConfigureTestRestTemplate` or `@AutoConfigureRestTestClient`.
-- Package names above are from the Boot 4.1 reference. Imports from `org.springframework.boot.test.autoconfigure.*` are the Boot 3 locations.
 - Kotlin: confirm that `springmockk` supports your Boot version before using `@MockkBean`; otherwise use `@MockitoBean` or a fake.
 - Do not use H2 in place of the production database; behavior and SQL dialects differ.
 

@@ -12,11 +12,31 @@ Pick JUnit 5 with `kotlin.test` or AssertJ, or Kotest, per module, and do not mi
 
 ## Bad Example
 ```kotlin
-@Test fun test1() { assertTrue(parse("x") == null) }
+import kotlin.test.Test
+import kotlin.test.assertTrue
+
+fun parse(input: String): Long? = input.toLongOrNull()
+
+class ParseTest {
+    @Test fun test1() { assertTrue(parse("x") == null) }
+}
 ```
 
 ## Good Example
 ```kotlin
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+
+data class Price(val minorUnits: Long)
+
+object PriceParser {
+    fun parse(input: String): Price? =
+        input.toBigDecimalOrNull()?.movePointRight(2)?.toLong()?.let(::Price)
+}
+
 class PriceParserTest {
     @Test
     fun `returns null when the input is not a number`() {

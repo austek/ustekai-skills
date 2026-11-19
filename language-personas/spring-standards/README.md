@@ -1,7 +1,6 @@
 # Spring Standards
 
-Spring Boot 4.x (Spring Framework 7) standards for Java and Kotlin services, designed for AI agents and LLMs. Boot 4 requires Java 17+ and Kotlin 2.2+; JDK 21+ is recommended. Notes mark where Boot 3.x differs.
-
+Spring Boot 4.x (Spring Framework 7) standards for Java and Kotlin services, designed for AI agents and LLMs.
 ## Overview
 
 This skill provides 10 rules across 9 categories:
@@ -31,7 +30,7 @@ This skill provides 10 rules across 9 categories:
 - `serialization-jackson-3-migration` - Use Jackson 3 packages and customizers on Spring Boot 4
 
 ### Runtime, Observability, Testing, Kotlin
-- `concurrency-virtual-threads-property` - Enable virtual threads with the Boot property on JDK 21+ (MEDIUM)
+- `concurrency-virtual-threads-property` - Enable virtual threads with the Boot property (MEDIUM)
 - `observability-structured-logging-and-actuator` - Use Boot structured logging and expose only needed actuator endpoints (HIGH)
 - `testing-slices-and-service-connection` - Test with slices and @ServiceConnection Testcontainers (HIGH)
 - `kotlin-compiler-plugins-spring-jpa` - Apply the kotlin-spring and kotlin-jpa compiler plugins in Kotlin projects (HIGH)
@@ -51,7 +50,7 @@ spring-standards/
 
 ## Sources
 
-Rules follow the Spring Boot 4.1 reference, the Boot 4.0 migration guide and the Spring Framework reference. Package names and starters changed in Boot 4; re-check against the version you run.
+Rules follow the Spring Boot reference, the Boot migration guide and the Spring Framework reference.
 
 ## Related
 

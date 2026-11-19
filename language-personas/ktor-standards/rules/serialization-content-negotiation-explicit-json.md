@@ -30,6 +30,7 @@ data class OrderView(val id: String, val status: String, val note: String? = nul
 ```
 
 ## Notes
+- With `explicitNulls = false`, a nullable property that has a non-null default (`val note: String? = "n/a"`) encodes `null` as an absent field and decodes back to the default, not `null`. Keep `explicitNulls = true` (the default) for such DTOs.
 - Use `@SerialName` for wire names that must not change when a property is renamed.
 - Prefer `Instant` with `kotlinx-datetime` and a serializer over `String` for timestamps.
 

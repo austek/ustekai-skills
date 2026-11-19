@@ -1,14 +1,14 @@
 ---
-title: Enable Virtual Threads With the Boot Property on JDK 21+
+title: Enable Virtual Threads With the Boot Property
 impact: MEDIUM
 impactDescription: blocking MVC code scales on I/O without a reactive rewrite
 tags: [spring, virtual-threads, concurrency]
 ---
 
-# Enable Virtual Threads With the Boot Property on JDK 21+ [MEDIUM]
+# Enable Virtual Threads With the Boot Property [MEDIUM]
 
 ## Description
-Spring Boot 3.2+ runs request handling, `@Async`, scheduling and messaging listeners on virtual threads when `spring.threads.virtual.enabled=true` and the JDK is 21+. Use it for blocking, I/O-bound services (JDBC, REST clients) instead of moving to WebFlux. Keep connection pools sized for the database: virtual threads remove the thread limit, not the connection limit.
+Spring Boot runs request handling, `@Async`, scheduling and messaging listeners on virtual threads when `spring.threads.virtual.enabled=true`. Use it for blocking, I/O-bound services (JDBC, REST clients) instead of moving to WebFlux. Keep connection pools sized for the database: virtual threads remove the thread limit, not the connection limit.
 
 ## Bad Example
 ```yaml
@@ -30,9 +30,8 @@ spring:
 ```
 
 ## Notes
-- With the property on, the auto-configured `AsyncTaskExecutor` and scheduler become `SimpleAsyncTask*` types that start a virtual thread per task and ignore the `spring.task.*.pool.*` settings, so bound concurrency yourself. Fixed-delay `@Scheduled` jobs are the exception: `SimpleAsyncTaskScheduler` (Spring Framework 6.1+) runs them on its single scheduler thread to keep fixed-delay semantics, so prefer fixed-rate or cron triggers for jobs that should run concurrently.
+- With the property on, the auto-configured `AsyncTaskExecutor` and scheduler become `SimpleAsyncTask*` types that start a virtual thread per task and ignore the `spring.task.*.pool.*` settings, so bound concurrency yourself. Fixed-delay `@Scheduled` jobs are the exception: `SimpleAsyncTaskScheduler` runs them on its single scheduler thread to keep fixed-delay semantics, so prefer fixed-rate or cron triggers for jobs that should run concurrently.
 - Virtual threads are daemon threads. An application with no web server (scheduling or messaging only) exits at startup unless you set `spring.main.keep-alive=true`.
-- On JDK 24+ `synchronized` no longer pins virtual threads; on 21–23, avoid blocking inside `synchronized`.
 - `ThreadLocal` context (security, MDC) works on the request thread as before but does not cross into `@Async` tasks unless a `TaskDecorator` propagates it; do not add new `ThreadLocal`s.
 - Bound outbound concurrency with a `Semaphore` or the client's own limit.
 

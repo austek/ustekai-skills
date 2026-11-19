@@ -27,6 +27,10 @@ plugins {
 }
 ```
 ```kotlin
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import java.util.UUID
+
 @Entity
 class Customer(
     @Id val id: UUID,
@@ -35,6 +39,7 @@ class Customer(
 ```
 
 ## Notes
+- `kotlin-jpa` also applies all-open with the JPA preset, so entities are opened for lazy-association proxies without a manual `allOpen` block.
 - Do not make JPA entities `data class`es. Implement `equals`/`hashCode` on the id.
 - Use `constructor injection` with a primary constructor; no `lateinit var` fields.
 

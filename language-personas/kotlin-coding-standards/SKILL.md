@@ -8,8 +8,7 @@ paths:
 
 # Kotlin Coding Standards
 
-Idiomatic, coroutine-safe Kotlin for server-side and library code. Builds on [jvm-coding-standards](../jvm-coding-standards/SKILL.md) (virtual threads, logging, Jackson, pools); load both. Target Kotlin 2.2 or later (Spring Boot 4 requires 2.2+; the current stable is 2.4) on JDK 21+.
-
+Idiomatic, coroutine-safe Kotlin for server-side and library code. Builds on [jvm-coding-standards](../jvm-coding-standards/SKILL.md) (virtual threads, logging, Jackson, pools); load both.
 ## Categories
 
 ### Null Safety [CRITICAL]

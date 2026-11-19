@@ -32,8 +32,12 @@ install(StatusPages) {
         call.respond(HttpStatusCode.BadRequest, ErrorBody("invalid_request", e.reasons))
     }
     exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest, ErrorBody("bad_request")) }
+    exception<UnsupportedMediaTypeException> { call, _ ->
+        call.respond(HttpStatusCode.UnsupportedMediaType, ErrorBody("unsupported_media_type"))
+    }
     exception<OrderNotFound> { call, _ -> call.respond(HttpStatusCode.NotFound, ErrorBody("not_found")) }
     exception<Throwable> { call, e ->
+        if (e is CancellationException) throw e
         call.application.log.error("unhandled", e)
         call.respond(HttpStatusCode.InternalServerError, ErrorBody("internal_error"))
     }
@@ -42,7 +46,7 @@ install(StatusPages) {
 
 ## Notes
 - `StatusPages` `exception<Throwable>` must rethrow `CancellationException`, otherwise cancelled requests turn into 500s (see `coroutines-rethrow-cancellation`).
-- Register handlers for framework client errors such as `BadRequestException` so a malformed request returns 4xx. `StatusPages` picks the closest exception class, so they win over the `Throwable` fallback in any order; without them a malformed request is reported as a 500.
+- Register handlers for framework client errors such as `BadRequestException` so a malformed request returns 4xx. `StatusPages` picks the closest exception class, so they win over the `Throwable` fallback in any order; without them a malformed request is reported as a 500. `UnsupportedMediaTypeException` does not extend `BadRequestException`, so it needs its own 415 handler; register a handler for each other framework client-error exception you expect the same way.
 - Use RFC 9457 field names (`type`, `title`, `detail`) in `ErrorBody` for consistency with other services.
 
 ## References

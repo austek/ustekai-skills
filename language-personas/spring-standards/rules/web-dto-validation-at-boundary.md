@@ -19,7 +19,9 @@ User create(@RequestBody User user) { return repo.save(user); } // client can se
 ## Good Example
 ```java
 record CreateUser(@NotBlank @Size(max = 80) String name, @Email String email) {}
-record UserView(String id, String name) {}
+record UserView(String id, String name) {
+    static UserView from(User user) { return new UserView(user.id().toString(), user.name()); }
+}
 
 @PostMapping("/users")
 @ResponseStatus(HttpStatus.CREATED)
@@ -29,8 +31,8 @@ UserView create(@Valid @RequestBody CreateUser body) {
 ```
 
 ## Notes
-- Kotlin: put validation annotations on constructor properties with an explicit use-site target, for example `@field:NotBlank`. Under Kotlin 2.4's default rule an unqualified annotation goes to the constructor parameter first, which Bean Validation treats as a parameter constraint, not a property constraint.
-- Validate path and query parameters with `@Validated` on the controller and constraint annotations on the parameters.
+- Kotlin: put validation annotations on constructor properties with an explicit use-site target, for example `@field:NotBlank`. Under Kotlin's default rule an unqualified annotation goes to the constructor parameter first, which Bean Validation treats as a parameter constraint, not a property constraint.
+- Validate path and query parameters with constraint annotations directly on the controller method parameters. Do not add class-level `@Validated`: it switches to AOP validation, which throws `ConstraintViolationException` (a 500 under a catch-all handler). MVC's built-in method validation throws `HandlerMethodValidationException`, which `ResponseEntityExceptionHandler` maps to 400.
 
 ## References
 - [Validation](https://docs.spring.io/spring-framework/reference/core/validation/beanvalidation.html)

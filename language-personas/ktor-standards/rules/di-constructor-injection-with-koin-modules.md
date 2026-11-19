@@ -8,7 +8,7 @@ tags: [ktor, di, koin]
 # Inject Dependencies Through Constructors; Confine Koin to the Composition Root [MEDIUM]
 
 ## Description
-Ktor has no built-in DI. Wire dependencies by hand in the module function, or with Koin (`koin-ktor`) declared in one module definition. Services take their collaborators through constructors and never call `get()` or `inject()` themselves, which is a service locator and hides dependencies. Handlers receive the already-built service as a parameter.
+Ktor 3 ships an optional DI plugin (`ktor-server-di`); Koin (`koin-ktor`) is an alternative integration, used in the example below. Either way, declare bindings in one place, or wire dependencies by hand in the module function. Services take their collaborators through constructors and never call `get()` or `inject()` themselves, which is a service locator and hides dependencies. Handlers receive the already-built service as a parameter.
 
 ## Bad Example
 ```kotlin

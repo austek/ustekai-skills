@@ -33,7 +33,10 @@ class ApiErrors extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    ProblemDetail unexpected(Exception e) {
+    ProblemDetail unexpected(Exception e) throws Exception {
+        if (e instanceof AccessDeniedException || e instanceof AuthenticationException) {
+            throw e; // let Spring Security produce the 403/401
+        }
         String correlationId = UUID.randomUUID().toString();
         log.error("unhandled error {}", correlationId, e);
         ProblemDetail p = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "unexpected error");
@@ -46,7 +49,7 @@ class ApiErrors extends ResponseEntityExceptionHandler {
 ## Notes
 - Set `spring.mvc.problemdetails.enabled=true` to get Problem Details for Spring's own exceptions.
 - Keep the unexpected-error handler generic: status 500 and a correlation id.
-- An `Exception.class` handler also catches `AccessDeniedException` and `AuthenticationException` thrown from controller methods (method security) and turns them into 500s. Rethrow them or add explicit 403/401 handlers.
+- An `Exception.class` handler also catches `AccessDeniedException` and `AuthenticationException` thrown from controller methods (method security) and turns them into 500s. The good example rethrows them (`org.springframework.security.access.AccessDeniedException`, `org.springframework.security.core.AuthenticationException`); alternatively add explicit 403/401 handlers.
 
 ## References
 - [Error responses](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html)

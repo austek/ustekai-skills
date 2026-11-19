@@ -20,7 +20,7 @@ kover { reports { verify { rule { minBound(95) } } } } // global, rewards getter
 kover {
     reports {
         filters {
-            includes { classes("com.example.domain.*") }
+            includes { classes("com.example.domain.*", "com.example.service.*") }
             excludes { classes("*.config.*", "*Dto", "*\$\$serializer") }
         }
         verify {
@@ -33,7 +33,7 @@ tasks.check { dependsOn(tasks.koverVerify) }
 
 ## Notes
 - The Kover docs show `filters` at `reports` scope or per variant, and they apply to every `verify` rule in that scope; a variant-level `filters` block replaces the common one. `*` matches any characters, dots included, so `com.example.domain.*` covers subpackages.
-- Report coverage on the pull request diff in CI to catch untested new code.
+- `minBound` gates the aggregate coverage of the rule's class scope, not the lines a change adds; 100 untested new lines can pass beside 900 covered ones. Add a CI step that fails on changed-line coverage, by running a diff-coverage tool on the `koverXmlReport` output. Kover has no built-in diff gate.
 - Do not exclude a class just to pass the gate.
 
 ## References

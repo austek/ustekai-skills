@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "author": "Original — dotfiles",
-  "abstract": "Spring Boot 3.4+ standards for Java and Kotlin services: configuration, transactions, web, data, runtime, observability and testing.",
+  "abstract": "Spring Boot 4.x standards for Java and Kotlin services: configuration, transactions, web, data, runtime, observability and testing.",
   "categories": 9,
   "rules": 10,
   "sections": [

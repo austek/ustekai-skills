@@ -12,18 +12,36 @@ tags: [idioms, readability, scope-functions]
 
 ## Bad Example
 ```kotlin
-user?.let { u ->
-    u.address?.let { a ->
-        a.city?.let { c -> send(c.also { log(it) }) }
+class City(val name: String)
+class Address(val city: City?)
+class User(val address: Address?)
+
+fun log(city: City) = println(city.name)
+fun send(city: City) = println("sending ${city.name}")
+
+fun notify(user: User?) {
+    user?.let { u ->
+        u.address?.let { a ->
+            a.city?.let { c -> send(c.also { log(it) }) }
+        }
     }
 }
 ```
 
 ## Good Example
 ```kotlin
-val city = user?.address?.city ?: return
-log(city)
-send(city)
+class City(val name: String)
+class Address(val city: City?)
+class User(val address: Address?)
+
+fun log(city: City) = println(city.name)
+fun send(city: City) = println("sending ${city.name}")
+
+fun notify(user: User?) {
+    val city = user?.address?.city ?: return
+    log(city)
+    send(city)
+}
 ```
 
 ## Notes

@@ -8,18 +8,28 @@ tags: [idioms, api-design, readability]
 # Use Named Arguments for Booleans and Same-Typed Parameters [MEDIUM]
 
 ## Description
-A call like `send(msg, true, false)` hides intent, and swapped `String` arguments compile fine. Name boolean arguments and any run of same-typed parameters at the call site. Use default values instead of overloads. Replace boolean parameters with an enum when there are two or more.
+A call like `send(msg, true, false)` hides intent, and swapped `String` arguments compile fine. Name boolean arguments and any run of same-typed parameters at the call site of Kotlin functions (Kotlin cannot use named arguments when calling Java methods, so wrap those in a Kotlin function). Use default values instead of overloads. Replace boolean parameters with an enum when there are two or more.
 
 ## Bad Example
 ```kotlin
-export(report, true, false)
-transfer(from, to, amount)
+fun export(report: String, includeHeader: Boolean, compress: Boolean) {}
+fun transfer(from: String, to: String, amount: Long) {}
+
+fun run(report: String, source: String, target: String, amount: Long) {
+    export(report, true, false)
+    transfer(source, target, amount)
+}
 ```
 
 ## Good Example
 ```kotlin
-export(report, includeHeader = true, compress = false)
-transfer(from = source, to = target, amount = amount)
+fun export(report: String, includeHeader: Boolean, compress: Boolean) {}
+fun transfer(from: String, to: String, amount: Long) {}
+
+fun run(report: String, source: String, target: String, amount: Long) {
+    export(report, includeHeader = true, compress = false)
+    transfer(from = source, to = target, amount = amount)
+}
 ```
 
 ## Notes

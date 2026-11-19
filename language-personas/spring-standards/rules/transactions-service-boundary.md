@@ -14,7 +14,7 @@ A transaction should wrap a use case, so annotate the public service method that
 ```java
 @RestController
 class OrderController {
-    @Transactional // holds a connection for the whole request, including serialization
+    @Transactional // couples database transaction management to the web layer
     @PostMapping("/orders")
     Order place(@RequestBody NewOrder body) { /* ... */ }
 }

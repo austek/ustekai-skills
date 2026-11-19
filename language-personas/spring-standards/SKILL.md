@@ -13,7 +13,7 @@ paths:
 
 # Spring Standards
 
-Framework rules for Spring Boot 4.x (Spring Framework 7; Boot 4 needs Java 17+ and Kotlin 2.2+, JDK 21+ recommended). Notes call out where Boot 3.x differs. Language rules come from the language skills ([java-coding-standards](../java-coding-standards/SKILL.md) or [kotlin-coding-standards](../kotlin-coding-standards/SKILL.md)) and runtime rules from [jvm-coding-standards](../jvm-coding-standards/SKILL.md). Constructor injection is covered by `reflection-serialization-avoid-field-injection` in the Java skill.
+Framework rules for Spring Boot 4.x (Spring Framework 7). Language rules come from the language skills ([java-coding-standards](../java-coding-standards/SKILL.md) or [kotlin-coding-standards](../kotlin-coding-standards/SKILL.md)) and runtime rules from [jvm-coding-standards](../jvm-coding-standards/SKILL.md). Constructor injection is covered by `reflection-serialization-avoid-field-injection` in the Java skill.
 
 ## Categories
 
@@ -34,7 +34,7 @@ Framework rules for Spring Boot 4.x (Spring Framework 7; Boot 4 needs Java 17+ a
 ### Runtime & Observability [HIGH]
 | Rule | Description |
 |------|-------------|
-| [concurrency-virtual-threads-property](rules/concurrency-virtual-threads-property.md) | Enable virtual threads with the Boot property on JDK 21+ |
+| [concurrency-virtual-threads-property](rules/concurrency-virtual-threads-property.md) | Enable virtual threads with the Boot property |
 | [observability-structured-logging-and-actuator](rules/observability-structured-logging-and-actuator.md) | Use Boot structured logging and expose only needed actuator endpoints |
 
 ### Testing & Kotlin [HIGH]

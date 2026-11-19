@@ -1,11 +1,11 @@
 ---
 title: Assert Flow Emissions With Turbine
-impact: MEDIUM
+impact: HIGH
 impactDescription: deterministic, timeout-bounded assertions on each emission, completion and error
 tags: [flow, testing, turbine]
 ---
 
-# Assert Flow Emissions With Turbine [MEDIUM]
+# Assert Flow Emissions With Turbine [HIGH]
 
 ## Description
 Collecting a flow into a list with `toList()` hangs on infinite flows and cannot assert ordering against other events. Turbine's `test { }` collects into a channel, lets you `awaitItem()`, `awaitComplete()` and `awaitError()` one step at a time, and fails on unconsumed events.
@@ -26,7 +26,6 @@ fun emitsPrices() = runTest {
     source.prices().test {
         assertEquals(1, awaitItem())
         assertEquals(2, awaitItem())
-        cancelAndIgnoreRemainingEvents()
     }
 }
 ```

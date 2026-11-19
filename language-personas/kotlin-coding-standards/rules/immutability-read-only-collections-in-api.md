@@ -12,6 +12,8 @@ tags: [immutability, collections, api-design]
 
 ## Bad Example
 ```kotlin
+data class Item(val sku: String)
+
 class Cart {
     val items: MutableList<Item> = mutableListOf()
 }
@@ -19,6 +21,8 @@ class Cart {
 
 ## Good Example
 ```kotlin
+data class Item(val sku: String)
+
 class Cart {
     private val _items = mutableListOf<Item>()
     val items: List<Item> get() = _items.toList()

@@ -22,7 +22,7 @@ Explanation of why this rule matters and when to apply it. State the Spring Boot
 
 ## Notes
 - Additional tips and hints
-- Edge cases and Boot 3.x differences
+- Edge cases
 
 ## References
 - [Link text](URL)

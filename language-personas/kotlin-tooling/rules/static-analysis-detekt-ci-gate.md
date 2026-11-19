@@ -28,6 +28,9 @@ detekt {
 dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:${libs.versions.detekt.get()}")
 }
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    jvmTarget = "21"
+}
 tasks.check { dependsOn("detekt", "detektMain", "detektTest") }
 ```
 
@@ -41,9 +44,9 @@ coroutines:
 ```
 
 ## Notes
-- The snippets use the stable detekt 1.23.x coordinates (`io.gitlab.arturbosch.detekt`). Detekt 2.0 is still in alpha and uses the `dev.detekt` plugin id and group; migrate when it is stable.
-- With the detekt 1.23 Gradle plugin, the plain `detekt` task runs without type resolution and `check` does not run the type-resolved `detektMain`/`detektTest` on its own. Depend on them explicitly, or rules that need type resolution never gate the build.
-- Regenerate the baseline with `./gradlew detektBaseline` only in a dedicated PR.
+- The plain `detekt` task runs without type resolution and `check` does not run the type-resolved `detektMain`/`detektTest` on its own. Depend on them explicitly, or rules that need type resolution never gate the build.
+- Detekt inherits `jvmTarget` from the Kotlin toolchain but accepts targets only up to a JDK cap that trails the newest releases, so a latest-JDK toolchain can fail `check` before analysis. Pin `jvmTarget` on the detekt tasks as shown (the analysis target does not change your build output).
+- The plain baseline does not cover type-resolved findings such as `SuspendFunSwallowedCancellation`. Generate it with `./gradlew detektBaseline detektBaselineMain detektBaselineTest` and commit the generated baseline files, in a dedicated PR.
 - Suppress a single finding with `@Suppress("RuleName")` plus a reason in the commit, never a blanket disable.
 
 ## References

@@ -25,14 +25,17 @@ class FakeUserRepository : UserRepository {
     override suspend fun save(user: User) { users[user.id] = user }
 }
 
+val id = UserId("u-1")
 val repo = FakeUserRepository().apply { users[id] = User(id, "Grace") }
+val service = UserService(repo)
 service.rename(id, "Ada")
 assertEquals("Ada", repo.users.getValue(id).name)
 ```
 
 ## Notes
 - Use `coVerify(exactly = 1)` only for outward effects (email sent, event published).
-- Inline and `object` mocks need `mockkObject`/`unmockkAll`; clean up in `@AfterEach`.
+- MockK cannot mock inline functions; test them through their callers or a fake.
+- `object` mocks need `mockkObject`; call `unmockkAll` in `@AfterEach`.
 
 ## References
 - [MockK](https://mockk.io)

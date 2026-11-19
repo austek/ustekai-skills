@@ -1,6 +1,6 @@
 # Ktor Standards
 
-Ktor 3 server standards for Kotlin services, designed for AI agents and LLMs. The current line is 3.6; plugins are separate artifacts.
+Ktor 3 server standards for Kotlin services, designed for AI agents and LLMs. Plugins are separate artifacts.
 
 ## Overview
 

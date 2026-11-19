@@ -23,10 +23,6 @@ This skill provides 4 rules across 4 categories:
 - `lint-format-ktlint-or-spotless-check` - Gate CI on a Kotlin formatter check and reserve auto-format for local use
 - `ci-quality-gates-kover-coverage` - Gate coverage with Kover on changed logic, not a global percentage
 
-## Notes on versions
-
-Snippets use detekt 1.23.x coordinates; detekt 2.0 is still in alpha and renames the plugin to `dev.detekt`. Re-check tool versions before adopting a snippet.
-
 ## Structure
 
 ```
