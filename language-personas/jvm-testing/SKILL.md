@@ -32,5 +32,5 @@ app.start(); // blocks until /health actually returns 200
 ```
 
 ## See Also
-- [java-testing](../java-testing/SKILL.md), [scala-testing](../scala-testing/SKILL.md)
+- [java-testing](../java-testing/SKILL.md), [kotlin-testing](../kotlin-testing/SKILL.md), [scala-testing](../scala-testing/SKILL.md)
 - [jvm-coding-standards](../jvm-coding-standards/SKILL.md)

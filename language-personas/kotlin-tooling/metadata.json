@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "author": "Original — dotfiles",
+  "abstract": "Kotlin build and CI tooling: compiler flags, detekt, ktlint or Spotless, Kover.",
+  "categories": 4,
+  "rules": 4,
+  "sections": [
+    { "prefix": "compiler", "name": "Compiler", "impact": "HIGH", "count": 1 },
+    { "prefix": "static-analysis", "name": "Static Analysis", "impact": "HIGH", "count": 1 },
+    { "prefix": "lint-format", "name": "Lint & Formatting", "impact": "MEDIUM", "count": 1 },
+    { "prefix": "ci-quality-gates", "name": "CI Quality Gates", "impact": "MEDIUM", "count": 1 }
+  ]
+}
