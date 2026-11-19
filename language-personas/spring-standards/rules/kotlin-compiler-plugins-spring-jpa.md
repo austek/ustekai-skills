@@ -12,6 +12,11 @@ Kotlin classes are final, but Spring proxies (`@Transactional`, `@Configuration`
 
 ## Bad Example
 ```kotlin
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+
+data class NewOrder(val sku: String, val quantity: Int)
+
 @Service
 class OrderService { // final: @Transactional silently does nothing or fails
     @Transactional fun place(order: NewOrder) {}

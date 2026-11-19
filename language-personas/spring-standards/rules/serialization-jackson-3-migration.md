@@ -19,11 +19,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 ## Good Example
 ```java
+import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.DeserializationFeature;
 
-@Bean
-JsonMapperBuilderCustomizer strictJson() {
-    return builder -> builder.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+@Configuration(proxyBeanMethods = false)
+class JacksonConfig {
+    @Bean
+    JsonMapperBuilderCustomizer strictJson() {
+        return builder -> builder.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+    }
 }
 ```
 

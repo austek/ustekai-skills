@@ -22,6 +22,10 @@ class OrderControllerTest {
 
 ## Good Example
 ```java
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -31,9 +35,20 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 class OrderControllerTest {
     @Autowired MockMvcTester mvc;
     @MockitoBean OrderService service;
+
+    @Test
+    void returnsAnExistingOrder() {
+        given(service.find("42")).willReturn(new Order("42"));
+
+        assertThat(mvc.get().uri("/orders/42")).hasStatusOk();
+    }
 }
 ```
 ```java
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -45,7 +60,16 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import(ContainersConfig.class)
-class OrderRepositoryTest {}
+class OrderRepositoryTest {
+    @Autowired OrderRepository repository;
+
+    @Test
+    void persistsAnOrder() {
+        var saved = repository.save(new Order("book"));
+
+        assertThat(repository.findById(saved.getId())).isPresent();
+    }
+}
 
 @TestConfiguration(proxyBeanMethods = false)
 class ContainersConfig {

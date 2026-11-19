@@ -20,6 +20,24 @@ ResponseEntity<String> handle(Exception e) {
 
 ## Good Example
 ```java
+import java.net.URI;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+
+class OrderNotFound extends RuntimeException {
+    private final String id;
+    OrderNotFound(String id) { super("order not found"); this.id = id; }
+    String id() { return id; }
+}
+
 @RestControllerAdvice
 class ApiErrors extends ResponseEntityExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(ApiErrors.class);
@@ -34,8 +52,8 @@ class ApiErrors extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ProblemDetail unexpected(Exception e) throws Exception {
-        if (e instanceof AccessDeniedException || e instanceof AuthenticationException) {
-            throw e; // let Spring Security produce the 403/401
+        if (AnnotatedElementUtils.hasAnnotation(e.getClass(), ResponseStatus.class)) {
+            throw e; // let ResponseStatusExceptionResolver apply the declared status
         }
         String correlationId = UUID.randomUUID().toString();
         log.error("unhandled error {}", correlationId, e);
@@ -49,7 +67,8 @@ class ApiErrors extends ResponseEntityExceptionHandler {
 ## Notes
 - Set `spring.mvc.problemdetails.enabled=true` to get Problem Details for Spring's own exceptions.
 - Keep the unexpected-error handler generic: status 500 and a correlation id.
-- An `Exception.class` handler also catches `AccessDeniedException` and `AuthenticationException` thrown from controller methods (method security) and turns them into 500s. The good example rethrows them (`org.springframework.security.access.AccessDeniedException`, `org.springframework.security.core.AuthenticationException`); alternatively add explicit 403/401 handlers.
+- An `Exception.class` handler also catches exceptions annotated with `@ResponseStatus`, so the good example rethrows them for Spring's status resolver.
+- With Spring Security, the same handler turns `AccessDeniedException` and `AuthenticationException` thrown from controller methods (method security) into 500s. Extend the rethrow condition with `org.springframework.security.access.AccessDeniedException` and `org.springframework.security.core.AuthenticationException`, or add explicit 403/401 handlers.
 
 ## References
 - [Error responses](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html)
