@@ -12,6 +12,16 @@ Java 25 (JEP 513) lets a constructor run statements before `super(...)` or `this
 
 ## Bad Example
 ```java
+class Range {
+    final int low;
+    final int high;
+
+    Range(int low, int high) {
+        this.low = low;
+        this.high = high;
+    }
+}
+
 class PositiveRange extends Range {
     PositiveRange(int low, int high) {
         super(requirePositive(low), requirePositive(high)); // helper exists only to run before super
@@ -26,6 +36,16 @@ class PositiveRange extends Range {
 
 ## Good Example
 ```java
+class Range {
+    final int low;
+    final int high;
+
+    Range(int low, int high) {
+        this.low = low;
+        this.high = high;
+    }
+}
+
 class PositiveRange extends Range {
     PositiveRange(int low, int high) {
         if (low <= 0 || high <= 0) {

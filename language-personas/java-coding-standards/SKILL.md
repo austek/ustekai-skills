@@ -206,7 +206,7 @@ Adopt finalized language and library features by JDK version and keep preview fe
 
 ## JDK Baseline
 
-Target JDK 21 as the minimum and JDK 25 (the current LTS) as the preferred baseline. JDK 26 (March 2026) and JDK 27 (September 2026) are non-LTS; use them only where the team upgrades every six months. Rules tagged `java22`–`java26` apply only when the project's toolchain is at least that version; check `java.toolchain` or `maven.compiler.release` before suggesting them. Shared JVM rules (virtual threads, Jackson, build hygiene) live in [jvm-coding-standards](../jvm-coding-standards/SKILL.md).
+Target JDK 21 as the minimum and JDK 25 (the current LTS) as the preferred baseline. JDK 26 (March 2026) and JDK 27 (September 2026) are non-LTS; use them only where the team upgrades every six months. Rules tagged `java22`–`java26` apply only when the project's effective compilation release is at least that version. Check `options.release` (Gradle) or `maven.compiler.release` first, because a newer toolchain can still compile to an older release; fall back to the toolchain version only when no release is set. Shared JVM rules (virtual threads, Jackson, build hygiene) live in [jvm-coding-standards](../jvm-coding-standards/SKILL.md).
 
 ## Quick Reference
 

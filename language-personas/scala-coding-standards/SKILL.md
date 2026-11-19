@@ -298,4 +298,4 @@ def charge(amount: BigDecimal): Either[PaymentError, Receipt] = ???
 
 - [scala-testing](../scala-testing/SKILL.md) - Test-writing best practices for MUnit, ScalaTest, ScalaCheck, and mocking discipline
 - [scala-tooling](../scala-tooling/SKILL.md) - Build, compiler flags, Scalafix, Scalafmt, Scalastyle, and Wartremover rules
-- [jvm-coding-standards](../jvm-coding-standards/SKILL.md) - Runtime rules that apply to Scala as well: structured JSON logging, no secrets in logs, thread-safety documentation, connection pools, and virtual threads (Ox runs on them). Skip the Java-only Jackson and `ObjectMapper` guidance if the project uses circe or another codec.
+- [jvm-coding-standards](../jvm-coding-standards/SKILL.md) - Runtime rules that apply to Scala as well: structured JSON logging, no secrets in logs, thread-safety documentation, connection pools, and virtual threads (Ox runs on them). Apply the Jackson and `ObjectMapper` guidance only when the project uses Jackson; skip it for circe or another codec. Apply the virtual-threads rule only on JDK 21+.

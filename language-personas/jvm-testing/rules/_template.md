@@ -12,12 +12,12 @@ Explanation of why this rule matters and when to apply it.
 
 ## Bad Example
 ```java
-# Problematic code
+// Problematic code
 ```
 
 ## Good Example
 ```java
-# Recommended code
+// Recommended code
 ```
 
 ## Notes

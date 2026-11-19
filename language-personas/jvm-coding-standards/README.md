@@ -23,7 +23,7 @@ This skill provides 11 rules across 5 categories:
 - `concurrency-avoid-double-checked-locking` - Avoid double-checked locking — use the holder idiom or computeIfAbsent
 - `concurrency-immutable-shared-state` - Prefer immutability over synchronization for shared state
 - `concurrency-thread-safety-documentation` - Document a class's thread-safety contract explicitly
-- `concurrency-virtual-threads` - Use virtual threads for blocking I/O-bound work
+- `concurrency-virtual-threads` - Use virtual threads for blocking I/O-bound work (JDK 21+; skip on older targets)
 
 ### Logging (HIGH)
 - `logging-no-sensitive-data` - Never log secrets, tokens or personal data
@@ -53,7 +53,7 @@ jvm-coding-standards/
 ## Applicability
 
 - Java and Kotlin: all rules.
-- Scala: all rules except Jackson-specific guidance if the project uses circe or another codec.
+- Scala: all rules; apply the Jackson guidance only when the project uses Jackson, and the virtual-threads rule only on JDK 21+.
 
 ## Rule File Format
 

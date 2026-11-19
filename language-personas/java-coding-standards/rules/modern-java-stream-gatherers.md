@@ -12,21 +12,44 @@ tags: [streams, gatherers, java24]
 
 ## Bad Example
 ```java
-List<List<Order>> batches = new ArrayList<>();
-for (int i = 0; i < orders.size(); i += 100) {
-    batches.add(orders.subList(i, Math.min(i + 100, orders.size())));
+import java.util.ArrayList;
+import java.util.List;
+
+record Order(String id) {}
+
+class Batching {
+    static List<List<Order>> batches(List<Order> orders) {
+        List<List<Order>> batches = new ArrayList<>();
+        for (int i = 0; i < orders.size(); i += 100) {
+            batches.add(orders.subList(i, Math.min(i + 100, orders.size())));
+        }
+        return batches;
+    }
 }
 ```
 
 ## Good Example
 ```java
-List<List<Order>> batches = orders.stream()
-    .gather(Gatherers.windowFixed(100))
-    .toList();
+import java.util.List;
+import java.util.stream.Gatherers;
 
-List<Money> runningTotal = payments.stream()
-    .gather(Gatherers.scan(() -> Money.ZERO, Money::add))
-    .toList();
+record Order(String id) {}
+record Payment(long cents) {}
+
+class Batching {
+    static List<List<Order>> batches(List<Order> orders) {
+        return orders.stream()
+            .gather(Gatherers.windowFixed(100))
+            .toList();
+    }
+
+    static List<Long> runningTotal(List<Payment> payments) {
+        return payments.stream()
+            .map(Payment::cents)
+            .gather(Gatherers.scan(() -> 0L, Long::sum))
+            .toList();
+    }
+}
 ```
 
 ## Notes

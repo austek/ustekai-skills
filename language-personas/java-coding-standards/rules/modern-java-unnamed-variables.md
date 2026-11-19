@@ -12,25 +12,41 @@ Since Java 22 (JEP 456) `_` declares a binding that is intentionally unused: cat
 
 ## Bad Example
 ```java
-try {
-    return Integer.parseInt(text);
-} catch (NumberFormatException ignored) {
-    return fallback;
-}
+record Point(int x, int y) {}
+record Rectangle(Point topLeft, Point bottomRight) {}
 
-if (shape instanceof Rectangle(Point topLeft, Point bottomRight)) { /* uses neither */ }
+class Parsing {
+    static int parseOr(String text, int fallback) {
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
+    static boolean isRectangle(Object shape) {
+        return shape instanceof Rectangle(Point topLeft, Point bottomRight); // uses neither
+    }
+}
 ```
 
 ## Good Example
 ```java
-try {
-    return Integer.parseInt(text);
-} catch (NumberFormatException _) {
-    return fallback;
-}
+record Point(int x, int y) {}
+record Rectangle(Point topLeft, Point bottomRight) {}
 
-if (shape instanceof Rectangle(_, _)) {
-    return true;
+class Parsing {
+    static int parseOr(String text, int fallback) {
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException _) {
+            return fallback;
+        }
+    }
+
+    static boolean isRectangle(Object shape) {
+        return shape instanceof Rectangle(_, _);
+    }
 }
 ```
 

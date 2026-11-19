@@ -20,7 +20,7 @@ Rules that hold for every JVM language. Load this skill together with the langua
 | [concurrency-avoid-double-checked-locking](rules/concurrency-avoid-double-checked-locking.md) | Avoid double-checked locking — use the holder idiom or computeIfAbsent |
 | [concurrency-immutable-shared-state](rules/concurrency-immutable-shared-state.md) | Prefer immutability over synchronization for shared state |
 | [concurrency-thread-safety-documentation](rules/concurrency-thread-safety-documentation.md) | Document a class's thread-safety contract explicitly |
-| [concurrency-virtual-threads](rules/concurrency-virtual-threads.md) | Use virtual threads for blocking I/O-bound work |
+| [concurrency-virtual-threads](rules/concurrency-virtual-threads.md) | Use virtual threads for blocking I/O-bound work (JDK 21+; skip on older targets) |
 
 ### Logging [HIGH]
 | Rule | Description |

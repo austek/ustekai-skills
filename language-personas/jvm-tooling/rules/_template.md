@@ -12,12 +12,12 @@ Explanation of why this rule matters and when to apply it.
 
 ## Bad Example
 ```kotlin
-# Problematic build config
+// Problematic build config
 ```
 
 ## Good Example
 ```kotlin
-# Recommended build config
+// Recommended build config
 ```
 
 ## Notes

@@ -41,7 +41,7 @@ tasks.withType<JavaCompile>().configureEach {
 
 ## Notes
 - `-Xdoclint` is off by default and is not part of `-Xlint:all`; enable it deliberately.
-- Sonar's "public methods should be documented" rule (S1176) is also coverage-driven; scope it to the public API module or set a minimum body size.
+- Sonar's "public methods should be documented" rule (S1176) is also coverage-driven; limit it to the public API module with its scope and exclusion settings, or disable it for internal modules.
 - Verify option names against your Checkstyle version; `allowMissingParamTags` and `allowMissingReturnTag` exist since 3.1, `validateThrows` since 6.0.
 
 ## References

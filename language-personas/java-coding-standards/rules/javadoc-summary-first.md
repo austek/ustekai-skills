@@ -12,23 +12,42 @@ The first sentence of a doc comment is what Javadoc puts in class and method ind
 
 ## Bad Example
 ```java
-/**
- * @param timeout the overall call may take up to {@code timeout * (retries + 1)}
- */
-public void setTimeout(Duration timeout) { ... }
+import java.time.Duration;
 
-/** Sets the timeout. */
-public void setTimeout(Duration timeout) { ... }
+class Client {
+    private Duration timeout;
+    private Duration retryTimeout;
+
+    /**
+     * @param timeout the overall call may take up to {@code timeout * (retries + 1)}
+     */
+    public void setTimeout(Duration timeout) {
+        this.timeout = timeout;
+    }
+
+    /** Sets the retry timeout. */
+    public void setRetryTimeout(Duration retryTimeout) {
+        this.retryTimeout = retryTimeout;
+    }
+}
 ```
 
 ## Good Example
 ```java
-/**
- * Bounds each attempt individually, not the call as a whole.
- *
- * @param timeout the overall call may take up to {@code timeout * (retries + 1)}
- */
-public void setTimeout(Duration timeout) { ... }
+import java.time.Duration;
+
+class Client {
+    private Duration timeout;
+
+    /**
+     * Bounds each attempt individually, not the call as a whole.
+     *
+     * @param timeout the overall call may take up to {@code timeout * (retries + 1)}
+     */
+    public void setTimeout(Duration timeout) {
+        this.timeout = timeout;
+    }
+}
 ```
 
 ## Notes

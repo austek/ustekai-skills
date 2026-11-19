@@ -12,14 +12,41 @@ JEP 500 (JDK 26) warns when deep reflection (`Field.setAccessible(true)` then `s
 
 ## Bad Example
 ```java
-Field f = Config.class.getDeclaredField("timeout");
-f.setAccessible(true);
-f.set(config, Duration.ofSeconds(1)); // JDK 26 warns
+import java.lang.reflect.Field;
+import java.time.Duration;
+
+class Config {
+    private final Duration timeout = Duration.ofSeconds(5);
+
+    Duration timeout() {
+        return timeout;
+    }
+}
+
+class Tamper {
+    static void shorten(Config config) throws ReflectiveOperationException {
+        Field f = Config.class.getDeclaredField("timeout");
+        f.setAccessible(true);
+        f.set(config, Duration.ofSeconds(1)); // JDK 26 warns
+    }
+}
 ```
 
 ## Good Example
 ```java
-Config tuned = config.withTimeout(Duration.ofSeconds(1)); // record or copy method
+import java.time.Duration;
+
+record Config(Duration timeout) {
+    Config withTimeout(Duration timeout) {
+        return new Config(timeout);
+    }
+}
+
+class Tune {
+    static Config shorten(Config config) {
+        return config.withTimeout(Duration.ofSeconds(1));
+    }
+}
 ```
 
 ## Notes
