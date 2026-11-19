@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0",
+  "author": "Original — dotfiles",
+  "abstract": "Integration-test rules shared by Java, Kotlin and Scala: Testcontainers lifecycle, reuse and wait strategies.",
+  "categories": 1,
+  "rules": 3,
+  "sections": [
+    { "prefix": "testcontainers", "name": "Testcontainers", "impact": "HIGH", "count": 3 }
+  ]
+}

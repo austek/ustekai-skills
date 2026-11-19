@@ -2,8 +2,8 @@
   "version": "1.0.0",
   "author": "Original \u2014 dotfiles",
   "abstract": "A comprehensive collection of Java coding standards and best practices. Designed for AI agents and LLMs to generate high-quality, idiomatic, and maintainable Java code.",
-  "categories": 17,
-  "rules": 80,
+  "categories": 18,
+  "rules": 82,
   "sections": [
     {
       "prefix": "anti-patterns",
@@ -15,13 +15,13 @@
       "prefix": "resource-management",
       "name": "Resource Management",
       "impact": "CRITICAL",
-      "count": 4
+      "count": 3
     },
     {
       "prefix": "concurrency",
       "name": "Concurrency",
       "impact": "HIGH",
-      "count": 6
+      "count": 3
     },
     {
       "prefix": "api-design",
@@ -57,7 +57,7 @@
       "prefix": "javadoc",
       "name": "Javadoc",
       "impact": "HIGH",
-      "count": 4
+      "count": 6
     },
     {
       "prefix": "records",
@@ -69,7 +69,7 @@
       "prefix": "reflection-serialization",
       "name": "Reflection & Serialization",
       "impact": "HIGH",
-      "count": 4
+      "count": 2
     },
     {
       "prefix": "modules",
@@ -99,13 +99,19 @@
       "prefix": "performance",
       "name": "Performance",
       "impact": "MEDIUM",
-      "count": 5
+      "count": 4
     },
     {
       "prefix": "naming",
       "name": "Naming",
       "impact": "MEDIUM",
       "count": 4
+    },
+    {
+      "prefix": "modern-java",
+      "name": "Modern Java (21-27)",
+      "impact": "MEDIUM",
+      "count": 7
     }
   ]
 }

@@ -138,3 +138,4 @@ class OrderRepositorySuite extends munit.FunSuite:
 
 - [scala-coding-standards](../scala-coding-standards/SKILL.md) - General Scala coding standards and best practices
 - [scala-tooling](../scala-tooling/SKILL.md) - Build, compiler flags, Scalafix, Scalafmt, Scalastyle, and Wartremover rules
+- [jvm-testing](../jvm-testing/SKILL.md) - Testcontainers lifecycle, reuse and wait-strategy rules; this skill has no container rules of its own, so use these for integration tests

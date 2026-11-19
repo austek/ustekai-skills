@@ -36,8 +36,9 @@ public int getRetryCount() {
 ## Good Example
 ```java
 /**
- * @param timeout applied to each attempt individually; the overall call may take up to
- *     {@code timeout * (getRetryCount() + 1)}
+ * Bounds each attempt individually, not the call as a whole.
+ *
+ * @param timeout the overall call may take up to {@code timeout * (getRetryCount() + 1)}
  */
 public void setTimeout(Duration timeout) {
     this.timeout = timeout;
