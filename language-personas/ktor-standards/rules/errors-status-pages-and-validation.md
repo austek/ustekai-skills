@@ -12,12 +12,27 @@ Install `StatusPages` once and map domain and framework exceptions to status cod
 
 ## Bad Example
 ```kotlin
-post("/orders") {
-    try {
-        val body = call.receive<NewOrder>()
-        call.respond(service.place(body))
-    } catch (e: Exception) {
-        call.respondText(e.stackTraceToString(), status = HttpStatusCode.InternalServerError)
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.post
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class NewOrder(val items: List<String>)
+
+fun interface OrderPlacer { fun place(order: NewOrder): String }
+
+fun Route.orders(service: OrderPlacer) {
+    post("/orders") {
+        try {
+            val body = call.receive<NewOrder>()
+            call.respond(service.place(body))
+        } catch (e: Exception) {
+            call.respondText(e.stackTraceToString(), status = HttpStatusCode.InternalServerError)
+        }
     }
 }
 ```
@@ -29,6 +44,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.application.log
 import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.PayloadTooLargeException
 import io.ktor.server.plugins.UnsupportedMediaTypeException
 import io.ktor.server.plugins.requestvalidation.RequestValidation
@@ -62,6 +78,7 @@ fun Application.errorHandling() {
         exception<PayloadTooLargeException> { call, _ ->
             call.respond(HttpStatusCode.PayloadTooLarge, ErrorBody("payload_too_large", "Payload too large"))
         }
+        exception<NotFoundException> { call, _ -> call.respond(HttpStatusCode.NotFound, ErrorBody("not_found", "Not found")) }
         exception<OrderNotFound> { call, _ -> call.respond(HttpStatusCode.NotFound, ErrorBody("not_found", "Not found")) }
         exception<Throwable> { call, e ->
             if (e is CancellationException) throw e

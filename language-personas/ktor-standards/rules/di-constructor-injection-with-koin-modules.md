@@ -12,6 +12,11 @@ Ktor 3 ships an optional DI plugin (`ktor-server-di`); Koin (`koin-ktor`) is an 
 
 ## Bad Example
 ```kotlin
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+
+class OrderRepository
+
 class OrderService : KoinComponent {
     private val repo: OrderRepository by inject() // hidden dependency
 }
