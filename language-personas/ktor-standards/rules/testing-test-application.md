@@ -32,37 +32,67 @@ fun createsOrder() = runBlocking {
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
+import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.plugins.NotFoundException
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import io.ktor.server.util.getOrFail
 import kotlin.test.assertEquals
+import kotlinx.serialization.Serializable
 import org.junit.jupiter.api.Test
 
-interface OrderService { fun find(id: String): String? }
-class FakeOrderService : OrderService { override fun find(id: String): String? = null }
+@Serializable
+data class OrderView(val id: String)
 
-// Production module: install StatusPages, ContentNegotiation and validation here, then register routes.
+@Serializable
+data class ErrorBody(val code: String, val message: String)
+
+interface OrderService { fun find(id: String): OrderView? }
+
+class FakeOrderService(private val orders: Map<String, OrderView> = emptyMap()) : OrderService {
+    override fun find(id: String): OrderView? = orders[id]
+}
+
 fun Application.module(orderService: OrderService) {
+    install(ContentNegotiation) { json() }
+    install(StatusPages) {
+        exception<NotFoundException> { call, e ->
+            call.respond(HttpStatusCode.NotFound, ErrorBody("not_found", e.message.orEmpty()))
+        }
+    }
     routing {
         get("/orders/{id}") {
-            val order = orderService.find(call.parameters.getOrFail("id"))
-            if (order == null) call.respond(HttpStatusCode.NotFound, "order not found") else call.respond(order)
+            val order = orderService.find(call.parameters.getOrFail("id")) ?: throw NotFoundException("order not found")
+            call.respond(order)
         }
     }
 }
 
 class OrderRoutesTest {
     @Test
-    fun `returns 404 for an unknown order`() = testApplication {
+    fun `serializes a known order through ContentNegotiation`() = testApplication {
+        application { module(orderService = FakeOrderService(mapOf("42" to OrderView("42")))) }
+
+        val response = client.get("/orders/42")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("""{"id":"42"}""", response.bodyAsText())
+    }
+
+    @Test
+    fun `maps an unknown order to a 404 body through StatusPages`() = testApplication {
         application { module(orderService = FakeOrderService()) }
 
         val response = client.get("/orders/missing")
 
         assertEquals(HttpStatusCode.NotFound, response.status)
-        assertEquals("order not found", response.bodyAsText()) // an unmatched route would return an empty body
+        assertEquals("""{"code":"not_found","message":"order not found"}""", response.bodyAsText())
     }
 }
 ```
