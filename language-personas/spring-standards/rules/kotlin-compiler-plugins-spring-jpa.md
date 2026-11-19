@@ -44,7 +44,14 @@ class Customer(
 ```
 
 ## Notes
-- `kotlin-jpa` also applies all-open with the JPA preset, so entities are opened for lazy-association proxies without a manual `allOpen` block.
+- From Kotlin 2.3.20, `kotlin-jpa` also applies all-open with the JPA preset, so entities are opened for lazy-association proxies without a manual `allOpen` block. Before 2.3.20 it only adds the no-arg constructor: either require 2.3.20 or later, or open the entities yourself:
+  ```kotlin
+  allOpen {
+      annotation("jakarta.persistence.Entity")
+      annotation("jakarta.persistence.MappedSuperclass")
+      annotation("jakarta.persistence.Embeddable")
+  }
+  ```
 - Do not make JPA entities `data class`es. Implement `equals`/`hashCode` on the id.
 - Use `constructor injection` with a primary constructor; no `lateinit var` fields.
 
