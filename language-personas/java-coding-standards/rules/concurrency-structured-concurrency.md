@@ -10,7 +10,7 @@ tags: [concurrency, structured-concurrency, virtual-threads, preview]
 ## Description
 `StructuredTaskScope` treats a group of concurrent subtasks as a single unit of work: they are forked from one scope, and the scope does not exit until every subtask completes, fails, or is cancelled together. This closes the gap that hand-rolled `Future`/`ExecutorService` fan-out leaves open — a sibling task that keeps running after another one fails, or a thread leaked past the method that started it. A `Joiner` policy on the scope (e.g., "fail fast if any subtask fails," "succeed as soon as one does") governs that propagation declaratively instead of via manual bookkeeping.
 
-**Preview status**: StructuredTaskScope is not a stable API. It shipped as a preview feature in Java 21 (JEP 453) and has been revised in every subsequent preview (JEP 462, JEP 480, JEP 499 as of Java 24) — the shape below reflects the JEP 499-era `open()`/`Joiner` API, which differs from the `ShutdownOnFailure`/`ShutdownOnSuccess` subclasses of the original JEP 453 preview. It requires `--enable-preview` to compile and run. Check your target JDK's release notes before depending on it in production, and expect the API to still be in motion.
+**Preview status**: StructuredTaskScope is not a stable API. It shipped as a preview feature in Java 21 (JEP 453) and has been revised in every subsequent preview (JEP 462, JEP 480, JEP 499, JEP 505 in Java 25, JEP 525 in Java 26, and JEP 533 in Java 27) — the shape below reflects the JEP 499-and-later `open()`/`Joiner` API, which differs from the `ShutdownOnFailure`/`ShutdownOnSuccess` subclasses of the original JEP 453 preview. It requires `--enable-preview` to compile and run. Check your target JDK's release notes before depending on it in production, and expect the API to still be in motion.
 
 ## Bad Example
 ```java
@@ -39,5 +39,8 @@ try (var scope = StructuredTaskScope.open(Joiner.<Object>awaitAllSuccessfulOrThr
 - Pair with virtual threads (`concurrency-virtual-threads`) — the model assumes forking many cheap, blocking subtasks.
 
 ## References
+- [JEP 533: Structured Concurrency (Seventh Preview)](https://openjdk.org/jeps/533)
+- [JEP 525: Structured Concurrency (Sixth Preview)](https://openjdk.org/jeps/525)
+- [JEP 505: Structured Concurrency (Fifth Preview)](https://openjdk.org/jeps/505)
 - [JEP 499: Structured Concurrency (Fourth Preview)](https://openjdk.org/jeps/499)
 - [JEP 453: Structured Concurrency (Preview)](https://openjdk.org/jeps/453)

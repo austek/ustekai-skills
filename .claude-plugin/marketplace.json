@@ -6,8 +6,8 @@
   "plugins": [
     {
       "name": "language-personas",
-      "description": "Java/Python/Rust/Scala coding-standards, testing, and tooling personas, plus a JVM systems mentor and a polyglot tutor.",
-      "version": "1.0.0",
+      "description": "Java/Python/Rust/Scala coding-standards, testing, and tooling personas, shared JVM base skills, plus a JVM systems mentor and a polyglot tutor.",
+      "version": "1.1.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
@@ -19,6 +19,7 @@
         "./python-coding-standards", "./python-testing", "./python-tooling",
         "./rust-coding-standards", "./rust-testing", "./rust-tooling",
         "./scala-coding-standards", "./scala-testing", "./scala-tooling",
+        "./jvm-coding-standards", "./jvm-testing", "./jvm-tooling",
         "./jvm-systems-mentor", "./polyglot-tutor"
       ]
     },

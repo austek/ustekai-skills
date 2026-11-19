@@ -140,3 +140,4 @@ final class Cache(entries: Map[String, String]) {
 
 - [scala-coding-standards](../scala-coding-standards/SKILL.md) - General Scala coding standards and best practices
 - [scala-testing](../scala-testing/SKILL.md) - Test-writing best practices for MUnit, ScalaTest, ScalaCheck, and mocking discipline
+- [jvm-tooling](../jvm-tooling/SKILL.md) - Applies only when Gradle or Maven builds the Scala project; the rules are written for those tools, not sbt or Mill. The principles (single version source, reproducible builds, dependency scanning, pinned JDK) carry over.

@@ -34,7 +34,8 @@ try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
 ## Notes
 - Never pool virtual threads; create a new one per task via `Thread.ofVirtual()` or `newVirtualThreadPerTaskExecutor()`.
 - CPU-bound work gets no benefit from virtual threads — use a bounded platform-thread pool instead.
-- Before JEP 491 (targeted Java 24), a `synchronized` block performing a blocking call pinned the virtual thread to its carrier; on earlier releases prefer `ReentrantLock` in code paths that block while holding a lock.
+- On Java 24+ (JEP 491) a `synchronized` block no longer pins the virtual thread, so do not rewrite `synchronized` to `ReentrantLock` for that reason. Pinning remains during native frames and class initialization.
+- On Java 21–23 a `synchronized` block performing a blocking call pins the carrier thread; prefer `ReentrantLock` there.
 - Virtual threads are always daemon threads and cannot be prioritized like platform threads.
 
 ## References

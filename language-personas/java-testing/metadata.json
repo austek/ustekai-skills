@@ -2,8 +2,8 @@
   "version": "1.0.0",
   "author": "Original \u2014 dotfiles",
   "abstract": "A collection of test-writing best practices for JUnit 5, AssertJ, Mockito, and Testcontainers. Designed for AI agents and LLMs to write readable, maintainable, and trustworthy tests.",
-  "categories": 7,
-  "rules": 29,
+  "categories": 6,
+  "rules": 26,
   "sections": [
     {
       "prefix": "mockito",
@@ -28,12 +28,6 @@
       "name": "Fixtures",
       "impact": "HIGH",
       "count": 4
-    },
-    {
-      "prefix": "testcontainers",
-      "name": "Testcontainers",
-      "impact": "HIGH",
-      "count": 3
     },
     {
       "prefix": "parametrized",

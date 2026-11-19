@@ -56,14 +56,7 @@ Build and share test data and setup without hidden shared mutable state.
 | [fixtures-extension-for-shared-setup](rules/fixtures-extension-for-shared-setup.md) | Extract cross-cutting setup into a JUnit extension |
 | [fixtures-test-instance-per-method-default](rules/fixtures-test-instance-per-method-default.md) | Leave test instance lifecycle at per-method default |
 
-### Testcontainers [HIGH]
-Run real dependencies in tests with correctly scoped container lifecycle and explicit wait strategies.
-
-| Rule | Description |
-|------|-------------|
-| [testcontainers-container-reuse](rules/testcontainers-container-reuse.md) | Reuse containers across a test run instead of restarting per class |
-| [testcontainers-lifecycle-scope](rules/testcontainers-lifecycle-scope.md) | Match container lifecycle scope to what the container represents |
-| [testcontainers-wait-strategy-explicit](rules/testcontainers-wait-strategy-explicit.md) | Declare an explicit wait strategy for every container |
+Testcontainers rules are JVM-wide and live in [jvm-testing](../jvm-testing/SKILL.md). Apply them together with this skill.
 
 ### Parameterized Tests [MEDIUM]
 Replace duplicated test methods with parameterized sources and readable case names.
@@ -135,16 +128,6 @@ void appliesDiscountToEligibleOrder() {
 
     assertThat(discounted.total()).isEqualByComparingTo("90.00");
 }
-```
-
-### Testcontainers
-```java
-GenericContainer<?> app = new GenericContainer<>("my-app:latest")
-    .withExposedPorts(8080)
-    .waitingFor(Wait.forHttp("/health")
-        .forStatusCode(200)
-        .withStartupTimeout(Duration.ofSeconds(60)));
-app.start(); // blocks until /health actually returns 200
 ```
 
 ### Parameterized Tests

@@ -4,15 +4,13 @@ A comprehensive guide to Java development tools, designed for AI agents and LLMs
 
 ## Overview
 
-This skill provides 20 rules across 5 categories:
+This skill provides 13 rules across 3 categories (build and dependency rules live in `jvm-tooling`):
 
 | Category | Prefix | Impact | Rules |
 |----------|--------|--------|-------|
-| Build Configuration | `build-` | HIGH | 4 |
 | Static Analysis | `static-analysis-` | HIGH | 4 |
 | CI Quality Gates | `ci-quality-gates-` | MEDIUM | 4 |
-| Dependency Management | `dependency-management-` | MEDIUM | 4 |
-| Lint & Formatting | `lint-format-` | MEDIUM | 4 |
+| Lint & Formatting | `lint-format-` | MEDIUM | 5 |
 
 ## Structure
 
@@ -24,20 +22,14 @@ skills/java-tooling/
 └── rules/
     ├── _sections.md      # Section definitions
     ├── _template.md      # Rule template
-    ├── build-*.md          # Build Configuration rules
     ├── static-analysis-*.md # Static Analysis rules
     ├── ci-quality-gates-*.md # CI Quality Gates rules
-    ├── dependency-management-*.md # Dependency Management rules
     └── lint-format-*.md    # Lint & Formatting rules
 ```
 
 ## Rules
 
-### Build Configuration (HIGH)
-- `build-api-vs-implementation-scope` - Treat api vs implementation as a compile-avoidance lever, not just encapsulation
-- `build-gradle-version-catalogs` - Centralize dependency versions in a Gradle version catalog
-- `build-maven-dependency-management-bom` - Import a BOM in dependencyManagement instead of pinning every version
-- `build-reproducible-builds` - Ban dynamic version ranges and non-deterministic archive output
+Build configuration and dependency management rules moved to `jvm-tooling`.
 
 ### Static Analysis (HIGH)
 - `static-analysis-archunit-boundary-tests` - Enforce package and layer boundaries with ArchUnit tests
@@ -51,13 +43,8 @@ skills/java-tooling/
 - `ci-quality-gates-fail-on-warnings` - Treat compiler warnings as errors in CI
 - `ci-quality-gates-mutation-testing` - Use PITest to verify tests actually assert something, not just execute lines
 
-### Dependency Management (MEDIUM)
-- `dependency-management-lockfile-or-bom` - Pick one source of truth — dependency lockfile or BOM, not neither
-- `dependency-management-minimal-transitive-exposure` - Exclude unneeded transitive dependencies instead of accepting the full graph
-- `dependency-management-version-catalog-single-source` - Make the version catalog the only place a version number can appear
-- `dependency-management-vulnerability-scanning` - Scan dependencies for known CVEs on every build, not at release time
-
 ### Lint & Formatting (MEDIUM)
+- `lint-format-javadoc-tool-alignment` - Configure Javadoc linters to match the documentation rules
 - `lint-format-checkstyle-config` - Scope Checkstyle to structural checks, not formatting
 - `lint-format-google-java-format` - Adopt google-java-format for zero-config, deterministic formatting
 - `lint-format-import-order` - Enforce deterministic import order, ban wildcard imports
