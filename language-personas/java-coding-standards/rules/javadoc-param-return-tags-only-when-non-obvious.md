@@ -38,7 +38,9 @@ public User createUser(String name, String email) { ... }
 ## Notes
 - `name` above has no `@param` because there is nothing to add beyond what the parameter name already says — that's a deliberate omission, not an oversight.
 - A generic type parameter (`@param <T> ...`) is more often worth documenting than a concrete one, since its constraint or role usually isn't obvious from a single letter.
-- Some static-analysis or Checkstyle configurations mandate a tag for every parameter regardless of content; where that conflict exists, prefer a short but genuinely informative tag over disabling the check — a filler tag is still better than a suppressed lint rule (see the general rule against silently disabling lint guards).
+- Checkstyle's `JavadocMethod` defaults `allowMissingParamTags` and `allowMissingReturnTag` to `false`, so a default Checkstyle run flags every omitted tag. Set both to `true` in the project config, scoped to this rule, instead of writing filler tags or suppressing the check; see `lint-format-javadoc-tool-alignment` in java-tooling.
+- `javac -Xdoclint` is off by default. Enabling `-Xdoclint:all` includes the `missing` group, which also reports omitted tags; use `-Xdoclint:all,-missing` to keep the syntax, HTML and reference checks.
+- Google Java Style agrees: Javadoc may be omitted on simple, obvious members, tags never have an empty description, and every block starts with a summary fragment (`javadoc-summary-first`). Kotlin's coding conventions go further and say to avoid `@param`/`@return` in KDoc.
 
 ## References
 - [How to Write Doc Comments for the Javadoc Tool (Oracle)](https://www.oracle.com/technical-resources/articles/java/javadoc-tool.html)

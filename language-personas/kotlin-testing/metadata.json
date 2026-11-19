@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "author": "Original — dotfiles",
+  "abstract": "Kotlin test-writing practices: runTest, Turbine, MockK and fakes, framework structure.",
+  "categories": 4,
+  "rules": 4,
+  "sections": [
+    { "prefix": "coroutines-testing", "name": "Coroutines Testing", "impact": "HIGH", "count": 1 },
+    { "prefix": "flow-testing", "name": "Flow Testing", "impact": "HIGH", "count": 1 },
+    { "prefix": "mocking", "name": "Mocking", "impact": "MEDIUM", "count": 1 },
+    { "prefix": "structure", "name": "Structure", "impact": "MEDIUM", "count": 1 }
+  ]
+}

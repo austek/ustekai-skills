@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "author": "Original — dotfiles",
+  "abstract": "Build and dependency rules shared by Java, Kotlin and Scala: Gradle and Maven scoping, version catalogs, reproducibility, vulnerability scanning and JDK toolchains.",
+  "categories": 3,
+  "rules": 9,
+  "sections": [
+    { "prefix": "build", "name": "Build Configuration", "impact": "HIGH", "count": 4 },
+    { "prefix": "toolchain", "name": "Toolchain", "impact": "HIGH", "count": 1 },
+    { "prefix": "dependency-management", "name": "Dependency Management", "impact": "MEDIUM", "count": 4 }
+  ]
+}

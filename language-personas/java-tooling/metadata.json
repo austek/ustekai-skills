@@ -1,16 +1,10 @@
 {
   "version": "1.0.0",
-  "author": "Original \u2014 dotfiles",
-  "abstract": "A comprehensive guide to Java development tooling. Configuration best practices for build systems, static analysis, CI quality gates, dependency management, and formatting.",
-  "categories": 5,
-  "rules": 20,
+  "author": "Original — dotfiles",
+  "abstract": "A comprehensive guide to Java development tooling. Configuration best practices for static analysis, CI quality gates, and formatting. Shared build and dependency rules live in jvm-tooling.",
+  "categories": 3,
+  "rules": 13,
   "sections": [
-    {
-      "prefix": "build",
-      "name": "Build Configuration",
-      "impact": "HIGH",
-      "count": 4
-    },
     {
       "prefix": "static-analysis",
       "name": "Static Analysis",
@@ -24,16 +18,10 @@
       "count": 4
     },
     {
-      "prefix": "dependency-management",
-      "name": "Dependency Management",
-      "impact": "MEDIUM",
-      "count": 4
-    },
-    {
       "prefix": "lint-format",
       "name": "Lint & Formatting",
       "impact": "MEDIUM",
-      "count": 4
+      "count": 5
     }
   ]
 }

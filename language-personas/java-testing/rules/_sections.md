@@ -47,16 +47,6 @@ Build and share test data and setup without hidden shared mutable state.
 - `fixtures-extension-for-shared-setup` - Extract cross-cutting setup into a JUnit extension
 - `fixtures-test-instance-per-method-default` - Leave test instance lifecycle at per-method default
 
-## Testcontainers (testcontainers)
-**Impact:** HIGH
-
-Run real dependencies in tests with correctly scoped container lifecycle and explicit wait strategies.
-
-**Rules:**
-- `testcontainers-container-reuse` - Reuse containers across a test run instead of restarting per class
-- `testcontainers-lifecycle-scope` - Match container lifecycle scope to what the container represents
-- `testcontainers-wait-strategy-explicit` - Declare an explicit wait strategy for every container
-
 ## Parameterized Tests (parametrized)
 **Impact:** MEDIUM
 

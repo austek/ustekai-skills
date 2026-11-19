@@ -4,7 +4,7 @@ Test-writing best practices for JUnit 5, AssertJ, Mockito, and Testcontainers, d
 
 ## Overview
 
-This skill provides 29 rules across 7 categories:
+This skill provides 26 rules across 6 categories (Testcontainers rules live in `jvm-testing`):
 
 | Category | Prefix | Impact | Rules |
 |----------|--------|--------|-------|
@@ -12,7 +12,6 @@ This skill provides 29 rules across 7 categories:
 | JUnit 5 Structure | `junit5-structure-` | HIGH | 5 |
 | AssertJ Assertions | `assertj-` | HIGH | 4 |
 | Fixtures | `fixtures-` | HIGH | 4 |
-| Testcontainers | `testcontainers-` | HIGH | 3 |
 | Parameterized Tests | `parametrized-` | MEDIUM | 4 |
 | Test Doubles | `test-doubles-` | MEDIUM | 3 |
 
@@ -30,7 +29,6 @@ skills/java-testing/
     ├── junit5-structure-*.md # JUnit 5 Structure rules
     ├── assertj-*.md        # AssertJ Assertions rules
     ├── fixtures-*.md       # Fixtures rules
-    ├── testcontainers-*.md # Testcontainers rules
     ├── parametrized-*.md   # Parameterized Tests rules
     └── test-doubles-*.md   # Test Doubles rules
 ```
@@ -64,10 +62,7 @@ skills/java-testing/
 - `fixtures-extension-for-shared-setup` - Extract cross-cutting setup into a JUnit extension
 - `fixtures-test-instance-per-method-default` - Leave test instance lifecycle at per-method default
 
-### Testcontainers (HIGH)
-- `testcontainers-container-reuse` - Reuse containers across a test run instead of restarting per class
-- `testcontainers-lifecycle-scope` - Match container lifecycle scope to what the container represents
-- `testcontainers-wait-strategy-explicit` - Declare an explicit wait strategy for every container
+Testcontainers rules moved to `jvm-testing`.
 
 ### Parameterized Tests (MEDIUM)
 - `parametrized-csv-source` - Use @CsvSource for compact scalar argument tables

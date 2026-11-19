@@ -19,7 +19,6 @@ Acquire and release JVM and I/O resources deterministically, without leaks or ha
 
 **Rules:**
 - `resource-management-autocloseable-implementation` - Implement AutoCloseable correctly for custom resource-holding classes
-- `resource-management-connection-pool-not-raw` - Acquire database connections from a pool, never raw per call
 - `resource-management-no-manual-finally-close` - Never hand-write a finally block to close a resource
 - `resource-management-try-with-resources` - Always use try-with-resources for AutoCloseable values
 
@@ -29,12 +28,9 @@ Acquire and release JVM and I/O resources deterministically, without leaks or ha
 Coordinate shared state and background work safely across threads and virtual threads.
 
 **Rules:**
-- `concurrency-avoid-double-checked-locking` - Avoid double-checked locking — use the holder idiom or computeIfAbsent
 - `concurrency-executor-service-lifecycle` - Always shut down an ExecutorService
-- `concurrency-immutable-shared-state` - Prefer immutability over synchronization for shared state
 - `concurrency-structured-concurrency` - Use StructuredTaskScope for fan-out/fan-in tasks
-- `concurrency-thread-safety-documentation` - Document a class's thread-safety contract explicitly
-- `concurrency-virtual-threads` - Use virtual threads for blocking I/O-bound work
+- `concurrency-scoped-values-over-threadlocal` - Use ScopedValue instead of ThreadLocal for per-request context
 
 ## API Design (api-design)
 **Impact:** HIGH
@@ -102,9 +98,11 @@ Model closed sets of variants with sealed types and exhaustive pattern matching.
 Document public API contracts precisely, without narrating the signature.
 
 **Rules:**
+- `javadoc-markdown-comments` - Use Markdown doc comments for new code on JDK 23+
 - `javadoc-no-signature-narration` - Never narrate the signature in a doc comment
 - `javadoc-param-return-tags-only-when-non-obvious` - Write @param/@return tags only when they add information
 - `javadoc-public-api-contract` - Document the contract, not the implementation, on public APIs
+- `javadoc-summary-first` - Start every doc comment with a summary sentence
 - `javadoc-throws-documentation` - Document every checked and meaningful unchecked throws
 
 ## Records (records)
@@ -126,8 +124,6 @@ Keep reflection and serialization at the edges of the system, configured explici
 **Rules:**
 - `reflection-serialization-avoid-field-injection` - Prefer constructor injection over reflective field injection
 - `reflection-serialization-avoid-for-business-logic` - Keep reflection out of business logic
-- `reflection-serialization-jackson-explicit-config` - Configure Jackson's ObjectMapper explicitly, never rely on defaults
-- `reflection-serialization-no-default-java-serialization` - Never use Java's built-in serialization for new code
 
 ## Modules (modules)
 **Impact:** HIGH
@@ -183,7 +179,6 @@ Apply measured, targeted performance techniques instead of premature optimizatio
 
 **Rules:**
 - `performance-array-vs-collection-hot-path` - Prefer primitive arrays over boxed collections in verified hot paths
-- `performance-avoid-autoboxing-hot-paths` - Avoid autoboxing in hot paths
 - `performance-avoid-premature-optimization` - Measure before optimizing
 - `performance-lazy-initialization` - Defer expensive initialization until first use
 - `performance-stringbuilder-for-loops` - Use StringBuilder for string concatenation inside loops
@@ -198,3 +193,17 @@ Choose names that reveal intention and avoid encoding type or scope.
 - `naming-consistent-getter-avoidance` - Avoid getX/setX naming for non-JavaBean types
 - `naming-intention-revealing-names` - Choose intention-revealing names
 - `naming-no-hungarian-notation` - Do not encode type or scope in names
+
+## Modern Java 21–27 (modern-java)
+**Impact:** MEDIUM
+
+Adopt finalized language and library features by JDK version and keep preview features out of production.
+
+**Rules:**
+- `modern-java-ffm-over-jni` - Use the Foreign Function and Memory API instead of JNI
+- `modern-java-flexible-constructor-bodies` - Validate arguments before super() with flexible constructor bodies
+- `modern-java-no-final-field-mutation` - Do not mutate final fields through reflection
+- `modern-java-no-preview-in-production` - Do not ship preview language features or APIs
+- `modern-java-sequenced-collections` - Use sequenced collection methods for first, last and reversed access
+- `modern-java-stream-gatherers` - Use stream gatherers for windowing and stateful steps
+- `modern-java-unnamed-variables` - Name unused bindings with the unnamed variable _

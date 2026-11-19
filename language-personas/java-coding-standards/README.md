@@ -4,7 +4,7 @@ A comprehensive collection of Java coding standards and best practices, designed
 
 ## Overview
 
-This skill provides 80 rules across 17 categories:
+This skill provides 82 rules across 18 categories (shared JVM rules live in `jvm-coding-standards`):
 
 | Category | Prefix | Impact | Rules |
 |----------|--------|--------|-------|
@@ -25,6 +25,7 @@ This skill provides 80 rules across 17 categories:
 | Nullability | `nullability-` | MEDIUM | 5 |
 | Performance | `performance-` | MEDIUM | 5 |
 | Naming | `naming-` | MEDIUM | 4 |
+| Modern Java (21–27) | `modern-java-` | MEDIUM | 7 |
 
 ## Structure
 
@@ -66,17 +67,13 @@ skills/java-coding-standards/
 
 ### Resource Management (CRITICAL)
 - `resource-management-autocloseable-implementation` - Implement AutoCloseable correctly for custom resource-holding classes
-- `resource-management-connection-pool-not-raw` - Acquire database connections from a pool, never raw per call
 - `resource-management-no-manual-finally-close` - Never hand-write a finally block to close a resource
 - `resource-management-try-with-resources` - Always use try-with-resources for AutoCloseable values
 
 ### Concurrency (HIGH)
-- `concurrency-avoid-double-checked-locking` - Avoid double-checked locking — use the holder idiom or computeIfAbsent
 - `concurrency-executor-service-lifecycle` - Always shut down an ExecutorService
-- `concurrency-immutable-shared-state` - Prefer immutability over synchronization for shared state
 - `concurrency-structured-concurrency` - Use StructuredTaskScope for fan-out/fan-in tasks
-- `concurrency-thread-safety-documentation` - Document a class's thread-safety contract explicitly
-- `concurrency-virtual-threads` - Use virtual threads for blocking I/O-bound work
+- `concurrency-scoped-values-over-threadlocal` - Use ScopedValue instead of ThreadLocal for per-request context
 
 ### API Design (HIGH)
 - `api-design-builder-for-many-params` - Use a builder when a constructor needs many parameters
@@ -114,9 +111,11 @@ skills/java-coding-standards/
 - `sealed-pattern-switch-exhaustiveness` - Switch exhaustively over sealed types — no default branch
 
 ### Javadoc (HIGH)
+- `javadoc-markdown-comments` - Use Markdown doc comments for new code on JDK 23+
 - `javadoc-no-signature-narration` - Never narrate the signature in a doc comment
 - `javadoc-param-return-tags-only-when-non-obvious` - Write @param/@return tags only when they add information
 - `javadoc-public-api-contract` - Document the contract, not the implementation, on public APIs
+- `javadoc-summary-first` - Start every doc comment with a summary sentence
 - `javadoc-throws-documentation` - Document every checked and meaningful unchecked throws
 
 ### Records (HIGH)
@@ -125,11 +124,18 @@ skills/java-coding-standards/
 - `records-implement-interface-for-behavior` - Implement an interface on a record to add shared behavior
 - `records-no-mutable-fields` - Never give a record a mutable component or backing field
 
+### Modern Java 21–27 (MEDIUM)
+- `modern-java-ffm-over-jni` - Use the Foreign Function and Memory API instead of JNI
+- `modern-java-flexible-constructor-bodies` - Validate arguments before super() with flexible constructor bodies
+- `modern-java-no-final-field-mutation` - Do not mutate final fields through reflection
+- `modern-java-no-preview-in-production` - Do not ship preview language features or APIs
+- `modern-java-sequenced-collections` - Use sequenced collection methods for first, last and reversed access
+- `modern-java-stream-gatherers` - Use stream gatherers for windowing and stateful steps
+- `modern-java-unnamed-variables` - Name unused bindings with the unnamed variable _
+
 ### Reflection & Serialization (HIGH)
 - `reflection-serialization-avoid-field-injection` - Prefer constructor injection over reflective field injection
 - `reflection-serialization-avoid-for-business-logic` - Keep reflection out of business logic
-- `reflection-serialization-jackson-explicit-config` - Configure Jackson's ObjectMapper explicitly, never rely on defaults
-- `reflection-serialization-no-default-java-serialization` - Never use Java's built-in serialization for new code
 
 ### Modules (HIGH)
 - `modules-api-vs-implementation-gradle-config` - Declare Gradle dependencies as api or implementation deliberately
@@ -160,7 +166,6 @@ skills/java-coding-standards/
 
 ### Performance (MEDIUM)
 - `performance-array-vs-collection-hot-path` - Prefer primitive arrays over boxed collections in verified hot paths
-- `performance-avoid-autoboxing-hot-paths` - Avoid autoboxing in hot paths
 - `performance-avoid-premature-optimization` - Measure before optimizing
 - `performance-lazy-initialization` - Defer expensive initialization until first use
 - `performance-stringbuilder-for-loops` - Use StringBuilder for string concatenation inside loops

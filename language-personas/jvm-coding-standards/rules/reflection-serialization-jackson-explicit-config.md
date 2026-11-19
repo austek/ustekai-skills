@@ -43,6 +43,7 @@ public class OrderClient {
 ```
 
 ## Notes
+- The example is Jackson 2. In Jackson 3 (Spring Boot 4's default; `tools.jackson` packages) mappers are immutable and built with `JsonMapper.builder()`, `java.time` and `Optional` support is built in so `JavaTimeModule` and `Jdk8Module` are not needed, and some defaults changed (for example `WRITE_DATES_AS_TIMESTAMPS` is off). The advice is unchanged: set every contract-relevant feature explicitly and pin it in a test. See `serialization-jackson-3-migration` in spring-standards.
 - `FAIL_ON_UNKNOWN_PROPERTIES = true` turns a caller sending a typo'd or renamed field into an immediate, diagnosable error instead of a value that silently never arrives.
 - Jackson reflectively locates a target's fields, getters, and constructors by default — the same reflective cost `reflection-serialization-avoid-field-injection` covers applies here: prefer a constructor Jackson can call directly (a canonical record constructor, or `@JsonCreator`) over reflective field injection.
 - Pin module versions (`jackson-databind`, `jackson-datatype-jsr310`) together — mismatched Jackson module versions across a classpath are a common source of `NoSuchMethodError` at runtime.

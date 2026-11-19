@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "author": "Original — dotfiles",
+  "abstract": "Language-neutral JVM runtime standards shared by Java, Kotlin and Scala: concurrency, logging, serialization, resource management and performance.",
+  "categories": 5,
+  "rules": 11,
+  "sections": [
+    { "prefix": "resource-management", "name": "Resource Management", "impact": "CRITICAL", "count": 1 },
+    { "prefix": "concurrency", "name": "Concurrency", "impact": "HIGH", "count": 4 },
+    { "prefix": "logging", "name": "Logging", "impact": "HIGH", "count": 3 },
+    { "prefix": "reflection-serialization", "name": "Reflection & Serialization", "impact": "HIGH", "count": 2 },
+    { "prefix": "performance", "name": "Performance", "impact": "MEDIUM", "count": 1 }
+  ]
+}

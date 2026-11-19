@@ -31,7 +31,6 @@ Acquire and release JVM and I/O resources deterministically, without leaks or ha
 | Rule | Description |
 |------|-------------|
 | [resource-management-autocloseable-implementation](rules/resource-management-autocloseable-implementation.md) | Implement AutoCloseable correctly for custom resource-holding classes |
-| [resource-management-connection-pool-not-raw](rules/resource-management-connection-pool-not-raw.md) | Acquire database connections from a pool, never raw per call |
 | [resource-management-no-manual-finally-close](rules/resource-management-no-manual-finally-close.md) | Never hand-write a finally block to close a resource |
 | [resource-management-try-with-resources](rules/resource-management-try-with-resources.md) | Always use try-with-resources for AutoCloseable values |
 
@@ -40,12 +39,9 @@ Coordinate shared state and background work safely across threads and virtual th
 
 | Rule | Description |
 |------|-------------|
-| [concurrency-avoid-double-checked-locking](rules/concurrency-avoid-double-checked-locking.md) | Avoid double-checked locking — use the holder idiom or computeIfAbsent |
 | [concurrency-executor-service-lifecycle](rules/concurrency-executor-service-lifecycle.md) | Always shut down an ExecutorService |
-| [concurrency-immutable-shared-state](rules/concurrency-immutable-shared-state.md) | Prefer immutability over synchronization for shared state |
 | [concurrency-structured-concurrency](rules/concurrency-structured-concurrency.md) | Use StructuredTaskScope for fan-out/fan-in tasks |
-| [concurrency-thread-safety-documentation](rules/concurrency-thread-safety-documentation.md) | Document a class's thread-safety contract explicitly |
-| [concurrency-virtual-threads](rules/concurrency-virtual-threads.md) | Use virtual threads for blocking I/O-bound work |
+| [concurrency-scoped-values-over-threadlocal](rules/concurrency-scoped-values-over-threadlocal.md) | Use ScopedValue instead of ThreadLocal for per-request context |
 
 ### API Design [HIGH]
 Shape public class and method surfaces so they are hard to misuse.
@@ -107,9 +103,11 @@ Document public API contracts precisely, without narrating the signature.
 
 | Rule | Description |
 |------|-------------|
+| [javadoc-markdown-comments](rules/javadoc-markdown-comments.md) | Use Markdown doc comments for new code on JDK 23+ |
 | [javadoc-no-signature-narration](rules/javadoc-no-signature-narration.md) | Never narrate the signature in a doc comment |
 | [javadoc-param-return-tags-only-when-non-obvious](rules/javadoc-param-return-tags-only-when-non-obvious.md) | Write @param/@return tags only when they add information |
 | [javadoc-public-api-contract](rules/javadoc-public-api-contract.md) | Document the contract, not the implementation, on public APIs |
+| [javadoc-summary-first](rules/javadoc-summary-first.md) | Start every doc comment with a summary sentence |
 | [javadoc-throws-documentation](rules/javadoc-throws-documentation.md) | Document every checked and meaningful unchecked throws |
 
 ### Records [HIGH]
@@ -129,8 +127,6 @@ Keep reflection and serialization at the edges of the system, configured explici
 |------|-------------|
 | [reflection-serialization-avoid-field-injection](rules/reflection-serialization-avoid-field-injection.md) | Prefer constructor injection over reflective field injection |
 | [reflection-serialization-avoid-for-business-logic](rules/reflection-serialization-avoid-for-business-logic.md) | Keep reflection out of business logic |
-| [reflection-serialization-jackson-explicit-config](rules/reflection-serialization-jackson-explicit-config.md) | Configure Jackson's ObjectMapper explicitly, never rely on defaults |
-| [reflection-serialization-no-default-java-serialization](rules/reflection-serialization-no-default-java-serialization.md) | Never use Java's built-in serialization for new code |
 
 ### Modules [HIGH]
 Manage module and package boundaries deliberately across Gradle and JPMS.
@@ -181,7 +177,6 @@ Apply measured, targeted performance techniques instead of premature optimizatio
 | Rule | Description |
 |------|-------------|
 | [performance-array-vs-collection-hot-path](rules/performance-array-vs-collection-hot-path.md) | Prefer primitive arrays over boxed collections in verified hot paths |
-| [performance-avoid-autoboxing-hot-paths](rules/performance-avoid-autoboxing-hot-paths.md) | Avoid autoboxing in hot paths |
 | [performance-avoid-premature-optimization](rules/performance-avoid-premature-optimization.md) | Measure before optimizing |
 | [performance-lazy-initialization](rules/performance-lazy-initialization.md) | Defer expensive initialization until first use |
 | [performance-stringbuilder-for-loops](rules/performance-stringbuilder-for-loops.md) | Use StringBuilder for string concatenation inside loops |
@@ -195,6 +190,23 @@ Choose names that reveal intention and avoid encoding type or scope.
 | [naming-consistent-getter-avoidance](rules/naming-consistent-getter-avoidance.md) | Avoid getX/setX naming for non-JavaBean types |
 | [naming-intention-revealing-names](rules/naming-intention-revealing-names.md) | Choose intention-revealing names |
 | [naming-no-hungarian-notation](rules/naming-no-hungarian-notation.md) | Do not encode type or scope in names |
+
+### Modern Java (21–27) [MEDIUM]
+Adopt finalized language and library features by JDK version and keep preview features out of production.
+
+| Rule | Description |
+|------|-------------|
+| [modern-java-ffm-over-jni](rules/modern-java-ffm-over-jni.md) | Use the Foreign Function and Memory API instead of JNI |
+| [modern-java-flexible-constructor-bodies](rules/modern-java-flexible-constructor-bodies.md) | Validate arguments before super() with flexible constructor bodies |
+| [modern-java-no-final-field-mutation](rules/modern-java-no-final-field-mutation.md) | Do not mutate final fields through reflection |
+| [modern-java-no-preview-in-production](rules/modern-java-no-preview-in-production.md) | Do not ship preview language features or APIs |
+| [modern-java-sequenced-collections](rules/modern-java-sequenced-collections.md) | Use sequenced collection methods for first, last and reversed access |
+| [modern-java-stream-gatherers](rules/modern-java-stream-gatherers.md) | Use stream gatherers for windowing and stateful steps |
+| [modern-java-unnamed-variables](rules/modern-java-unnamed-variables.md) | Name unused bindings with the unnamed variable _ |
+
+## JDK Baseline
+
+Target JDK 21 as the minimum and JDK 25 (the current LTS) as the preferred baseline. JDK 26 (March 2026) and JDK 27 (September 2026) are non-LTS; use them only where the team upgrades every six months. Rules tagged `java22`–`java26` apply only when the project's toolchain is at least that version; check `java.toolchain` or `maven.compiler.release` before suggesting them. Shared JVM rules (virtual threads, Jackson, build hygiene) live in [jvm-coding-standards](../jvm-coding-standards/SKILL.md).
 
 ## Quick Reference
 
