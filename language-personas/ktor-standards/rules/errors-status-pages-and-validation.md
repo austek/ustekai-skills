@@ -24,22 +24,50 @@ post("/orders") {
 
 ## Good Example
 ```kotlin
-install(RequestValidation) {
-    validate<NewOrder> { if (it.items.isEmpty()) ValidationResult.Invalid("items must not be empty") else ValidationResult.Valid }
-}
-install(StatusPages) {
-    exception<RequestValidationException> { call, e ->
-        call.respond(HttpStatusCode.BadRequest, ErrorBody("invalid_request", e.reasons))
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.application.log
+import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.PayloadTooLargeException
+import io.ktor.server.plugins.UnsupportedMediaTypeException
+import io.ktor.server.plugins.requestvalidation.RequestValidation
+import io.ktor.server.plugins.requestvalidation.RequestValidationException
+import io.ktor.server.plugins.requestvalidation.ValidationResult
+import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.response.respond
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class NewOrder(val items: List<String>)
+
+@Serializable
+data class ErrorBody(val code: String, val details: List<String> = emptyList())
+
+class OrderNotFound(val id: String) : RuntimeException("order not found")
+
+fun Application.errorHandling() {
+    install(RequestValidation) {
+        validate<NewOrder> { if (it.items.isEmpty()) ValidationResult.Invalid("items must not be empty") else ValidationResult.Valid }
     }
-    exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest, ErrorBody("bad_request")) }
-    exception<UnsupportedMediaTypeException> { call, _ ->
-        call.respond(HttpStatusCode.UnsupportedMediaType, ErrorBody("unsupported_media_type"))
-    }
-    exception<OrderNotFound> { call, _ -> call.respond(HttpStatusCode.NotFound, ErrorBody("not_found")) }
-    exception<Throwable> { call, e ->
-        if (e is CancellationException) throw e
-        call.application.log.error("unhandled", e)
-        call.respond(HttpStatusCode.InternalServerError, ErrorBody("internal_error"))
+    install(StatusPages) {
+        exception<RequestValidationException> { call, e ->
+            call.respond(HttpStatusCode.BadRequest, ErrorBody("invalid_request", e.reasons))
+        }
+        exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest, ErrorBody("bad_request")) }
+        exception<UnsupportedMediaTypeException> { call, _ ->
+            call.respond(HttpStatusCode.UnsupportedMediaType, ErrorBody("unsupported_media_type"))
+        }
+        exception<PayloadTooLargeException> { call, _ ->
+            call.respond(HttpStatusCode.PayloadTooLarge, ErrorBody("payload_too_large"))
+        }
+        exception<OrderNotFound> { call, _ -> call.respond(HttpStatusCode.NotFound, ErrorBody("not_found")) }
+        exception<Throwable> { call, e ->
+            if (e is CancellationException) throw e
+            call.application.log.error("unhandled", e)
+            call.respond(HttpStatusCode.InternalServerError, ErrorBody("internal_error"))
+        }
     }
 }
 ```

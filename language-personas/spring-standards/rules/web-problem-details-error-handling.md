@@ -12,9 +12,16 @@ Handle exceptions in one `@RestControllerAdvice` and return `ProblemDetail` (RFC
 
 ## Bad Example
 ```java
-@ExceptionHandler(Exception.class)
-ResponseEntity<String> handle(Exception e) {
-    return ResponseEntity.status(500).body(e.toString()); // leaks internals
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+class ApiErrors {
+    @ExceptionHandler(Exception.class)
+    ResponseEntity<String> handle(Exception e) {
+        return ResponseEntity.status(500).body(e.toString()); // leaks internals
+    }
 }
 ```
 
@@ -67,7 +74,7 @@ class ApiErrors extends ResponseEntityExceptionHandler {
 ## Notes
 - Set `spring.mvc.problemdetails.enabled=true` to get Problem Details for Spring's own exceptions.
 - Keep the unexpected-error handler generic: status 500 and a correlation id.
-- An `Exception.class` handler also catches exceptions annotated with `@ResponseStatus`, so the good example rethrows them for Spring's status resolver.
+- An `Exception.class` handler also catches exceptions annotated with `@ResponseStatus`, so the good example rethrows them for Spring's status resolver. The status is preserved, but the body comes from the container's `/error` handling, not Problem Details; map such exceptions with an explicit handler when clients need RFC 9457 bodies.
 - With Spring Security, the same handler turns `AccessDeniedException` and `AuthenticationException` thrown from controller methods (method security) into 500s. Extend the rethrow condition with `org.springframework.security.access.AccessDeniedException` and `org.springframework.security.core.AuthenticationException`, or add explicit 403/401 handlers.
 
 ## References

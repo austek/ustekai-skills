@@ -12,10 +12,13 @@ tags: [ktor, testing]
 
 ## Bad Example
 ```kotlin
+import io.ktor.server.application.Application
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
+
+fun Application.module() {}
 
 @Test
 fun createsOrder() = runBlocking {

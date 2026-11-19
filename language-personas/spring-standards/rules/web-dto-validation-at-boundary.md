@@ -12,8 +12,22 @@ Bind requests to dedicated DTO records with bean-validation annotations and `@Va
 
 ## Bad Example
 ```java
-@PostMapping("/users")
-User create(@RequestBody User user) { return repo.save(user); } // client can set id, role, passwordHash
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+interface UserRepository extends JpaRepository<User, String> {}
+
+@RestController
+class UserController {
+    private final UserRepository repo;
+
+    UserController(UserRepository repo) { this.repo = repo; }
+
+    @PostMapping("/users")
+    User create(@RequestBody User user) { return repo.save(user); } // client can set id, role, passwordHash
+}
 ```
 
 ## Good Example
