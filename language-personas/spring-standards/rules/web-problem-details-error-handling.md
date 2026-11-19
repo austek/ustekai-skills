@@ -22,11 +22,22 @@ ResponseEntity<String> handle(Exception e) {
 ```java
 @RestControllerAdvice
 class ApiErrors extends ResponseEntityExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(ApiErrors.class);
+
     @ExceptionHandler(OrderNotFound.class)
     ProblemDetail notFound(OrderNotFound e) {
         ProblemDetail p = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "order not found");
         p.setType(URI.create("https://errors.example.com/order-not-found"));
         p.setProperty("orderId", e.id());
+        return p;
+    }
+
+    @ExceptionHandler(Exception.class)
+    ProblemDetail unexpected(Exception e) {
+        String correlationId = UUID.randomUUID().toString();
+        log.error("unhandled error {}", correlationId, e);
+        ProblemDetail p = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "unexpected error");
+        p.setProperty("correlationId", correlationId);
         return p;
     }
 }
@@ -35,6 +46,7 @@ class ApiErrors extends ResponseEntityExceptionHandler {
 ## Notes
 - Set `spring.mvc.problemdetails.enabled=true` to get Problem Details for Spring's own exceptions.
 - Keep the unexpected-error handler generic: status 500 and a correlation id.
+- An `Exception.class` handler also catches `AccessDeniedException` and `AuthenticationException` thrown from controller methods (method security) and turns them into 500s. Rethrow them or add explicit 403/401 handlers.
 
 ## References
 - [Error responses](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html)

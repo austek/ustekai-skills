@@ -38,7 +38,7 @@ class OrderService {
 
 ## Notes
 - Kotlin: apply the `kotlin-spring` compiler plugin so `@Service` classes are open and proxies work.
-- Publish events after commit with `@TransactionalEventListener(phase = AFTER_COMMIT)` or an outbox table.
+- `@TransactionalEventListener(phase = AFTER_COMMIT)` runs in process after commit: a crash or listener failure loses the event. Use it for best-effort side effects; use an outbox table (as above) when publication must be durable.
 - Call an external service outside the transaction, then open a short one to record the result.
 
 ## References

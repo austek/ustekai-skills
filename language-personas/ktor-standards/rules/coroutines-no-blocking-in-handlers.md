@@ -28,7 +28,7 @@ get("/report") { call.respond(repository.load()) }
 ```
 
 ## Notes
-- Prefer a coroutine-aware driver (R2DBC, Exposed with `newSuspendedTransaction`) where it fits.
+- Prefer a coroutine-aware driver (R2DBC) where it fits. JDBC stays blocking even behind Exposed's `newSuspendedTransaction`: it only moves the blocking call onto the dispatcher you pass.
 - Bound `Dispatchers.IO` work with `Dispatchers.IO.limitedParallelism(n)` to protect a small connection pool.
 - On JDK 21+, a blocking stack on virtual threads is an alternative; Ktor handlers are still coroutines, so keep the rule.
 

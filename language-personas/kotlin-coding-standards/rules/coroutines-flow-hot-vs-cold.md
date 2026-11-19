@@ -30,6 +30,7 @@ class Prices(source: PriceSource, scope: CoroutineScope) {
 
 ## Notes
 - `StateFlow` drops intermediate values; use `SharedFlow` or a `Channel` when every event matters.
+- `SharedFlow` with `replay = 0` loses events emitted while no collector is subscribed, and a late collector sees only the replay cache. It is not durable delivery: use a `Channel` or a persisted queue when every event must be retained.
 - Collect with a lifecycle-bound scope; do not `launch` an endless collector without an owner.
 
 ## References

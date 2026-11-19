@@ -28,7 +28,7 @@ detekt {
 dependencies {
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:${libs.versions.detekt.get()}")
 }
-tasks.check { dependsOn(tasks.detekt) }
+tasks.check { dependsOn("detekt", "detektMain", "detektTest") }
 ```
 
 ```yaml
@@ -42,6 +42,7 @@ coroutines:
 
 ## Notes
 - The snippets use the stable detekt 1.23.x coordinates (`io.gitlab.arturbosch.detekt`). Detekt 2.0 is still in alpha and uses the `dev.detekt` plugin id and group; migrate when it is stable.
+- With the detekt 1.23 Gradle plugin, the plain `detekt` task runs without type resolution and `check` does not run the type-resolved `detektMain`/`detektTest` on its own. Depend on them explicitly, or rules that need type resolution never gate the build.
 - Regenerate the baseline with `./gradlew detektBaseline` only in a dedicated PR.
 - Suppress a single finding with `@Suppress("RuleName")` plus a reason in the commit, never a blanket disable.
 

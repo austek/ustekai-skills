@@ -19,12 +19,12 @@ kover { reports { verify { rule { minBound(95) } } } } // global, rewards getter
 ```kotlin
 kover {
     reports {
-        filters { excludes { classes("*.config.*", "*Dto", "*\$\$serializer") } }
+        filters {
+            includes { classes("com.example.domain.*") }
+            excludes { classes("*.config.*", "*Dto", "*\$\$serializer") }
+        }
         verify {
-            rule("domain") {
-                filters { includes { packages("com.example.domain..") } }
-                minBound(80)
-            }
+            rule("domain") { minBound(80) }
         }
     }
 }
@@ -32,6 +32,7 @@ tasks.check { dependsOn(tasks.koverVerify) }
 ```
 
 ## Notes
+- The Kover docs show `filters` at `reports` scope or per variant, and they apply to every `verify` rule in that scope; a variant-level `filters` block replaces the common one. `*` matches any characters, dots included, so `com.example.domain.*` covers subpackages.
 - Report coverage on the pull request diff in CI to catch untested new code.
 - Do not exclude a class just to pass the gate.
 

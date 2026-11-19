@@ -23,10 +23,13 @@ order.items.add(item)
 data class Order(val id: OrderId, val status: Status, val items: List<Item>) {
     fun add(item: Item): Order = copy(items = items + item)
 }
+
+fun order(id: OrderId, status: Status, items: List<Item>) = Order(id, status, items.toList())
 ```
 
 ## Notes
 - A `val` of a `MutableList` type is still mutable; expose `List`, hold the mutable list privately.
+- A `List` parameter can still be a caller-owned `MutableList`. Copy it at the boundary (`toList()`) or use `kotlinx.collections.immutable`, and keep the elements (`Item`) immutable too.
 - Validate invariants in `init { require(...) }`. `copy()` re-runs `init`, so invariants hold for derived values too.
 
 ## References

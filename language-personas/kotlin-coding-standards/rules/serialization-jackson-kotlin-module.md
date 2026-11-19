@@ -35,6 +35,7 @@ val dto = Json { ignoreUnknownKeys = true }.decodeFromString<UserDto>(json)
 - Spring Boot 4 auto-configures a `JsonMapper`; a Boot issue reported the Kotlin module not being picked up automatically. Add a test that deserializes a data class with a default value so a missing module fails the build.
 - The `com.fasterxml.jackson.annotation` package (annotations) is unchanged in Jackson 3.
 - Declare DTO properties non-null where the contract guarantees them so a missing field fails fast.
+- `DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES` turns a JSON `null` for a primitive such as `Int` into an error instead of `0`. Jackson 3 enables it by default; on Jackson 2 enable it and add a test with null and missing primitive fields.
 
 ## References
 - [jackson-module-kotlin](https://github.com/FasterXML/jackson-module-kotlin)

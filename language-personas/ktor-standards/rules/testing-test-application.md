@@ -22,7 +22,7 @@ fun createsOrder() = runBlocking {
 ```kotlin
 @Test
 fun `returns 404 for an unknown order`() = testApplication {
-    application { orderModule(FakeOrderService()) ; installPlugins() }
+    application { module(orderService = FakeOrderService()) } // the production module; it installs the plugins
     val client = createClient { install(ContentNegotiation) { json() } }
 
     val response = client.get("/orders/missing")

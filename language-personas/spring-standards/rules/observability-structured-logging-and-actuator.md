@@ -39,6 +39,7 @@ management:
 ```
 
 ## Notes
+- Do not publish the management port through the public Service or ingress; restrict it with a NetworkPolicy to the scraper and probes. Bind `management.server.address=127.0.0.1` only when the sole client is a sidecar in the same pod, since a loopback bind refuses other pods and kubelet probes.
 - Use Micrometer Tracing to put `traceId` and `spanId` in the MDC; they appear as JSON fields.
 - Mask values with `management.endpoint.configprops.show-values=never` if configprops is ever exposed.
 

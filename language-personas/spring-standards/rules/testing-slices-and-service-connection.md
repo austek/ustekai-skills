@@ -34,6 +34,7 @@ class OrderControllerTest {
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -43,12 +44,13 @@ class OrderRepositoryTest {}
 @TestConfiguration(proxyBeanMethods = false)
 class ContainersConfig {
     @Bean @ServiceConnection
-    PostgreSQLContainer<?> postgres() { return new PostgreSQLContainer<>("postgres:17-alpine"); }
+    PostgreSQLContainer postgres() { return new PostgreSQLContainer("postgres:17-alpine"); }
 }
 ```
 
 ## Notes
 - Add the `spring-boot-testcontainers` test dependency (and `testcontainers-junit-jupiter` plus the database module) for `@ServiceConnection`.
+- Boot 4 uses Testcontainers 2: the module is `org.testcontainers:testcontainers-postgresql` and `PostgreSQLContainer` is the non-generic `org.testcontainers.postgresql` type (Testcontainers 1 used `org.testcontainers.containers.PostgreSQLContainer<?>`).
 - In Boot 4, `@SpringBootTest` no longer provides `MockMvc`, `TestRestTemplate` or `WebClient` by itself: add `@AutoConfigureMockMvc`, `@AutoConfigureTestRestTemplate` or `@AutoConfigureRestTestClient`.
 - Package names above are from the Boot 4.1 reference. Imports from `org.springframework.boot.test.autoconfigure.*` are the Boot 3 locations.
 - Kotlin: confirm that `springmockk` supports your Boot version before using `@MockkBean`; otherwise use `@MockitoBean` or a fake.
