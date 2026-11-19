@@ -61,4 +61,4 @@ See `rules/_template.md`: front matter (`title`, `impact`, `impactDescription`, 
 
 ## Related
 
-- [java-coding-standards](../java-coding-standards/SKILL.md), [scala-coding-standards](../scala-coding-standards/SKILL.md)
+- [java-coding-standards](../java-coding-standards/SKILL.md), [kotlin-coding-standards](../kotlin-coding-standards/SKILL.md), [scala-coding-standards](../scala-coding-standards/SKILL.md)

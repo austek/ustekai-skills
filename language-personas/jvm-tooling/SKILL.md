@@ -52,4 +52,4 @@ git add gradle.lockfile
 ```
 
 ## See Also
-- [java-tooling](../java-tooling/SKILL.md), [scala-tooling](../scala-tooling/SKILL.md)
+- [java-tooling](../java-tooling/SKILL.md), [kotlin-tooling](../kotlin-tooling/SKILL.md), [scala-tooling](../scala-tooling/SKILL.md)

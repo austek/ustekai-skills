@@ -12,9 +12,10 @@ In Claude Code:
 
 Then enable whichever plugins you want:
 
-- `language-personas` — Java/Python/Rust/Scala coding-standards, testing, and
-  tooling personas. The `jvm-*` skills hold rules shared across JVM languages.
-  Also a JVM systems mentor and a polyglot tutor.
+- `language-personas` — Java/Kotlin/Python/Rust/Scala coding-standards, testing,
+  and tooling personas. The `jvm-*` skills hold rules shared by Java, Kotlin and
+  Scala; `spring-standards` and `ktor-standards` hold framework rules. Also a JVM
+  systems mentor and a polyglot tutor.
 - `pr-workflow-oss` — open/review/land a PR on a personal or open-source repo,
   and babysit your open PRs across a repo, user, or org (`/babysit-pr-oss`).
 - `babysit-pane` — a pane and commands (`/babysit-pane` prints the state,

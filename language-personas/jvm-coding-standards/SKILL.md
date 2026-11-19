@@ -46,5 +46,5 @@ Rules that hold for every JVM language. Load this skill together with the langua
 | [performance-avoid-autoboxing-hot-paths](rules/performance-avoid-autoboxing-hot-paths.md) | Avoid autoboxing in hot paths |
 
 ## See Also
-- [java-coding-standards](../java-coding-standards/SKILL.md), [scala-coding-standards](../scala-coding-standards/SKILL.md)
+- [java-coding-standards](../java-coding-standards/SKILL.md), [kotlin-coding-standards](../kotlin-coding-standards/SKILL.md), [scala-coding-standards](../scala-coding-standards/SKILL.md)
 - [jvm-testing](../jvm-testing/SKILL.md), [jvm-tooling](../jvm-tooling/SKILL.md)

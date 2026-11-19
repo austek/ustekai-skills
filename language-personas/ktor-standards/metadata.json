@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "author": "Original — dotfiles",
+  "abstract": "Ktor 3 server standards for Kotlin services: structure, configuration, error handling, non-blocking handlers, serialization, observability and tests.",
+  "categories": 8,
+  "rules": 8,
+  "sections": [
+    { "prefix": "coroutines", "name": "Coroutines", "impact": "CRITICAL", "count": 1 },
+    { "prefix": "config", "name": "Configuration", "impact": "HIGH", "count": 1 },
+    { "prefix": "errors", "name": "Errors", "impact": "HIGH", "count": 1 },
+    { "prefix": "serialization", "name": "Serialization", "impact": "HIGH", "count": 1 },
+    { "prefix": "observability", "name": "Observability", "impact": "HIGH", "count": 1 },
+    { "prefix": "testing", "name": "Testing", "impact": "HIGH", "count": 1 },
+    { "prefix": "structure", "name": "Structure", "impact": "MEDIUM", "count": 1 },
+    { "prefix": "di", "name": "Dependency Injection", "impact": "MEDIUM", "count": 1 }
+  ]
+}

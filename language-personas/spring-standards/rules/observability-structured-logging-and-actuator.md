@@ -1,0 +1,47 @@
+---
+title: Use Boot Structured Logging and Expose Only Needed Actuator Endpoints
+impact: HIGH
+impactDescription: JSON logs without custom encoders, and no accidental exposure of env or heap dumps
+tags: [spring, logging, actuator, observability]
+---
+
+# Use Boot Structured Logging and Expose Only Needed Actuator Endpoints [HIGH]
+
+## Description
+Spring Boot 3.4 introduced native structured logging, still present in 4.x: `logging.structured.format.console` accepts `ecs`, `logstash` or `gelf`. Use it so every line is JSON (see `logging-structured-json`). Expose only `health`, `info`, `prometheus` (and `metrics` if needed) over the web, secure the management port separately, and enable liveness/readiness probes for Kubernetes.
+
+## Bad Example
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*" # env, heapdump, beans, configprops
+```
+
+## Good Example
+```yaml
+logging:
+  structured:
+    format:
+      console: logstash
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  server:
+    port: 9090
+```
+
+## Notes
+- Use Micrometer Tracing to put `traceId` and `spanId` in the MDC; they appear as JSON fields.
+- Mask values with `management.endpoint.configprops.show-values=never` if configprops is ever exposed.
+
+## References
+- [Structured Logging](https://docs.spring.io/spring-boot/reference/features/logging.html#features.logging.structured)
+- [Actuator endpoints](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html)

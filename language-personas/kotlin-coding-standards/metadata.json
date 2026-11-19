@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "author": "Original — dotfiles",
+  "abstract": "Idiomatic, coroutine-safe Kotlin coding standards for server-side and library code. Designed for AI agents and LLMs.",
+  "categories": 10,
+  "rules": 17,
+  "sections": [
+    { "prefix": "null-safety", "name": "Null Safety", "impact": "CRITICAL", "count": 2 },
+    { "prefix": "coroutines", "name": "Coroutines", "impact": "CRITICAL", "count": 5 },
+    { "prefix": "error-handling", "name": "Error Handling", "impact": "HIGH", "count": 1 },
+    { "prefix": "immutability", "name": "Immutability", "impact": "HIGH", "count": 2 },
+    { "prefix": "sealed", "name": "Sealed Types", "impact": "HIGH", "count": 1 },
+    { "prefix": "serialization", "name": "Serialization", "impact": "HIGH", "count": 1 },
+    { "prefix": "idioms", "name": "Idioms", "impact": "MEDIUM", "count": 2 },
+    { "prefix": "api-design", "name": "API Design", "impact": "MEDIUM", "count": 1 },
+    { "prefix": "interop", "name": "Java Interop", "impact": "LOW", "count": 1 },
+    { "prefix": "docs", "name": "Documentation", "impact": "LOW", "count": 1 }
+  ]
+}

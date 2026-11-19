@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "author": "Original — dotfiles",
+  "abstract": "Spring Boot 3.4+ standards for Java and Kotlin services: configuration, transactions, web, data, runtime, observability and testing.",
+  "categories": 9,
+  "rules": 10,
+  "sections": [
+    { "prefix": "config", "name": "Configuration", "impact": "HIGH", "count": 1 },
+    { "prefix": "transactions", "name": "Transactions", "impact": "HIGH", "count": 1 },
+    { "prefix": "data", "name": "Data", "impact": "HIGH", "count": 1 },
+    { "prefix": "web", "name": "Web", "impact": "HIGH", "count": 2 },
+    { "prefix": "serialization", "name": "Serialization", "impact": "HIGH", "count": 1 },
+    { "prefix": "concurrency", "name": "Concurrency", "impact": "MEDIUM", "count": 1 },
+    { "prefix": "observability", "name": "Observability", "impact": "HIGH", "count": 1 },
+    { "prefix": "testing", "name": "Testing", "impact": "HIGH", "count": 1 },
+    { "prefix": "kotlin", "name": "Kotlin", "impact": "HIGH", "count": 1 }
+  ]
+}

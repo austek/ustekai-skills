@@ -48,4 +48,4 @@ Written for Gradle and Maven. Scala projects on sbt or Mill get the principles (
 
 ## Related
 
-- [java-tooling](../java-tooling/SKILL.md), [scala-tooling](../scala-tooling/SKILL.md)
+- [java-tooling](../java-tooling/SKILL.md), [kotlin-tooling](../kotlin-tooling/SKILL.md), [scala-tooling](../scala-tooling/SKILL.md)

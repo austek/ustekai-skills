@@ -32,8 +32,8 @@ jvm-testing/
 
 ## Applicability
 
-Apply to any JVM test that starts a container. Framework wiring (Spring `@ServiceConnection`, Ktor `testApplication`) belongs in the framework skills.
+Apply to any JVM test that starts a container. Framework wiring (Spring `@ServiceConnection`, Ktor `testApplication`) is covered in [spring-standards](../spring-standards/SKILL.md) and [ktor-standards](../ktor-standards/SKILL.md).
 
 ## Related
 
-- [java-testing](../java-testing/SKILL.md), [scala-testing](../scala-testing/SKILL.md)
+- [java-testing](../java-testing/SKILL.md), [kotlin-testing](../kotlin-testing/SKILL.md), [scala-testing](../scala-testing/SKILL.md)
