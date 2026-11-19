@@ -19,17 +19,40 @@ verify { repo.save(any()) } // proves a call happened, not that the name changed
 
 ## Good Example
 ```kotlin
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+@JvmInline value class UserId(val value: String)
+data class User(val id: UserId, val name: String)
+
+interface UserRepository {
+    suspend fun find(id: UserId): User?
+    suspend fun save(user: User)
+}
+
+class UserService(private val repo: UserRepository) {
+    suspend fun rename(id: UserId, name: String) {
+        repo.find(id)?.let { repo.save(it.copy(name = name)) }
+    }
+}
+
 class FakeUserRepository : UserRepository {
     val users = mutableMapOf<UserId, User>()
     override suspend fun find(id: UserId) = users[id]
     override suspend fun save(user: User) { users[user.id] = user }
 }
 
-val id = UserId("u-1")
-val repo = FakeUserRepository().apply { users[id] = User(id, "Grace") }
-val service = UserService(repo)
-service.rename(id, "Ada")
-assertEquals("Ada", repo.users.getValue(id).name)
+class UserServiceTest {
+    @Test
+    fun `rename stores the new name`() = runTest {
+        val id = UserId("u-1")
+        val repo = FakeUserRepository().apply { users[id] = User(id, "Grace") }
+        val service = UserService(repo)
+        service.rename(id, "Ada")
+        assertEquals("Ada", repo.users.getValue(id).name)
+    }
+}
 ```
 
 ## Notes

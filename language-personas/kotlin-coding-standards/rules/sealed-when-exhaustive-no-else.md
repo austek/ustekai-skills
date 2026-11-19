@@ -12,6 +12,12 @@ A `when` used as an expression over a `sealed` class, interface or `enum` must c
 
 ## Bad Example
 ```kotlin
+sealed interface UiState {
+    data object Loading : UiState
+    data class Success(val data: String) : UiState
+    data class Failure(val error: Throwable) : UiState
+}
+
 fun label(state: UiState): String = when (state) {
     is UiState.Loading -> "loading"
     else -> "other" // new variants silently land here

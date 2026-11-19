@@ -12,20 +12,38 @@ Install `CallId` to read or generate a request id, `CallLogging` with `callIdMdc
 
 ## Bad Example
 ```kotlin
-install(CallLogging) // plain text lines, no correlation id
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.plugins.calllogging.CallLogging
+
+fun Application.module() {
+    install(CallLogging) // plain text lines, no correlation id
+}
 ```
 
 ## Good Example
 ```kotlin
-install(CallId) {
-    header(HttpHeaders.XRequestId)
-    generate { UUID.randomUUID().toString() }
-    verify { it.isNotBlank() }
-}
-install(CallLogging) {
-    level = Level.INFO
-    callIdMdc("call-id")
-    filter { call -> !call.request.path().startsWith("/health") }
+import io.ktor.http.HttpHeaders
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.plugins.callid.CallId
+import io.ktor.server.plugins.callid.callIdMdc
+import io.ktor.server.plugins.calllogging.CallLogging
+import io.ktor.server.request.path
+import java.util.UUID
+import org.slf4j.event.Level
+
+fun Application.module() {
+    install(CallId) {
+        header(HttpHeaders.XRequestId)
+        generate { UUID.randomUUID().toString() }
+        verify { it.isNotBlank() }
+    }
+    install(CallLogging) {
+        level = Level.INFO
+        callIdMdc("call-id")
+        filter { call -> !call.request.path().startsWith("/health") }
+    }
 }
 ```
 ```xml
@@ -40,6 +58,7 @@ install(CallLogging) {
 ## Notes
 - Place the appender and `<root>` inside `<configuration>` in `logback.xml` and remove any plain-text appender-ref from the root logger.
 - Add the `ktor-server-call-id` and `ktor-server-call-logging` artifacts. The default `verify` accepts only lowercase letters, digits and `+/=-`; set your own `verify` if clients send other characters.
+- Add the `net.logstash.logback:logstash-logback-encoder` artifact. It provides `LogstashEncoder`, which the JSON appender requires.
 - MDC is thread-local; coroutines need `MDCContext()` from `kotlinx-coroutines-slf4j` when they hop threads.
 - Return the call id in the `X-Request-Id` response header so clients can quote it.
 

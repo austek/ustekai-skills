@@ -51,7 +51,7 @@ val dto = Json { ignoreUnknownKeys = true }.decodeFromString<UserDto>(json)
 ## Notes
 - Spring Boot auto-configures a `JsonMapper`. Add a test that deserializes `{"id": "42"}` into `data class UserDto(val id: String, val name: String = "")` and asserts both `id` and `name`; the required parameter forces the Kotlin module, so a missing module fails the build.
 - The `com.fasterxml.jackson.annotation` package (annotations) keeps its name; only databind, modules and core moved to `tools.jackson`.
-- Declare DTO properties non-null where the contract guarantees them so a missing field fails fast.
+- Declare DTO properties non-null where the contract guarantees them. A non-null property with a default (`name` above) still accepts an absent field and takes the default; a field that must be present needs a non-null type and no default. Test the configured mapper with the field missing.
 - `DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES` turns a JSON `null` for a primitive such as `Int` into an error instead of `0`. Jackson 3 enables it by default; Jackson 2 does not, so enable it explicitly there. Keep a test with null and missing primitive fields.
 
 ## References

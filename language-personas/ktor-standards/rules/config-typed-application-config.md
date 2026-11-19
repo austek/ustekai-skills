@@ -19,6 +19,10 @@ get("/pay") {
 
 ## Good Example
 ```kotlin
+import io.ktor.server.config.ApplicationConfig
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+
 data class PaymentsConfig(val url: String, val timeout: Duration)
 
 fun ApplicationConfig.payments() = PaymentsConfig(

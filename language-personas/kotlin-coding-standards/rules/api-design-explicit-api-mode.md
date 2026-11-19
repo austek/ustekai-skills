@@ -12,6 +12,10 @@ Kotlin declarations are `public` by default and return types are inferred, so an
 
 ## Bad Example
 ```kotlin
+class HttpClient
+
+fun buildClient() = HttpClient()
+
 class HttpClientFactory { // public by accident
     fun create() = buildClient() // inferred public return type
 }

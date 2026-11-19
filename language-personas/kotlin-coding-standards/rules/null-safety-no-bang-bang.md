@@ -12,15 +12,30 @@ tags: [null-safety, errors]
 
 ## Bad Example
 ```kotlin
-val email = user.email!!
-repository.find(id)!!.name
+class User(val id: String, val email: String?)
+class Account(val name: String)
+class Repository { fun find(id: String): Account? = null }
+
+fun describe(user: User, repository: Repository, id: String): String {
+    val email = user.email!!
+    return email + repository.find(id)!!.name
+}
 ```
 
 ## Good Example
 ```kotlin
-val email = user.email ?: return Result.failure(MissingEmail(user.id))
-val name = repository.find(id)?.name ?: throw NotFound("user $id")
-val config = requireNotNull(env["API_URL"]) { "API_URL must be set" }
+class User(val id: String, val email: String?)
+class Account(val name: String)
+class Repository { fun find(id: String): Account? = null }
+class MissingEmail(val userId: String) : Exception()
+class NotFound(message: String) : Exception(message)
+
+fun describe(user: User, repository: Repository, id: String, env: Map<String, String>): Result<String> {
+    val email = user.email ?: return Result.failure(MissingEmail(user.id))
+    val name = repository.find(id)?.name ?: throw NotFound("user $id")
+    val config = requireNotNull(env["API_URL"]) { "API_URL must be set" }
+    return Result.success("$email $name $config")
+}
 ```
 
 ## Notes

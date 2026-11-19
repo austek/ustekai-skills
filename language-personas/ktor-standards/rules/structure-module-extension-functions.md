@@ -21,6 +21,41 @@ fun main() = embeddedServer(Netty, port = 8080) {
 
 ## Good Example
 ```kotlin
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.Application
+import io.ktor.server.application.call
+import io.ktor.server.application.install
+import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
+import io.ktor.server.routing.routing
+import io.ktor.server.util.getOrFail
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.Serializable
+
+@JvmInline value class OrderId(val value: String)
+data class Order(val id: OrderId, val total: Long)
+
+@Serializable
+data class OrderView(val id: String, val total: Long)
+
+fun Order.toView() = OrderView(id.value, total)
+
+interface OrderService { suspend fun find(id: OrderId): Order? }
+
+class AppDeps(val orderService: OrderService) {
+    companion object {
+        fun from(config: ApplicationConfig): AppDeps =
+            AppDeps(object : OrderService { override suspend fun find(id: OrderId): Order? = null })
+    }
+}
+
+fun Application.installPlugins() {
+    install(ContentNegotiation) { json() }
+}
+
 fun Application.module() {
     val deps = AppDeps.from(environment.config)
     installPlugins()

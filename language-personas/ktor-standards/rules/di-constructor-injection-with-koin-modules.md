@@ -19,13 +19,29 @@ class OrderService : KoinComponent {
 
 ## Good Example
 ```kotlin
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.routing
+import org.koin.dsl.module
+import org.koin.ktor.ext.inject
+import org.koin.ktor.plugin.Koin
+import javax.sql.DataSource
+
+class OrderRepository(private val dataSource: DataSource)
+class OrderService(private val repo: OrderRepository)
+
+fun Route.orderRoutes(service: OrderService) { /* handlers */ }
+
+fun dataSourceModule(dataSource: DataSource) = module { single { dataSource } }
+
 val appModule = module {
     single { OrderRepository(get()) }
     single { OrderService(get()) }
 }
 
-fun Application.module() {
-    install(Koin) { modules(appModule) }
+fun Application.module(dataSource: DataSource) {
+    install(Koin) { modules(dataSourceModule(dataSource), appModule) }
     val service by inject<OrderService>()
     routing { orderRoutes(service) } // resolved once at the edge
 }

@@ -43,7 +43,7 @@ import kotlinx.serialization.Serializable
 data class NewOrder(val items: List<String>)
 
 @Serializable
-data class ErrorBody(val code: String, val details: List<String> = emptyList())
+data class ErrorBody(val type: String, val title: String, val detail: String = "")
 
 class OrderNotFound(val id: String) : RuntimeException("order not found")
 
@@ -53,20 +53,20 @@ fun Application.errorHandling() {
     }
     install(StatusPages) {
         exception<RequestValidationException> { call, e ->
-            call.respond(HttpStatusCode.BadRequest, ErrorBody("invalid_request", e.reasons))
+            call.respond(HttpStatusCode.BadRequest, ErrorBody("invalid_request", "Invalid request", e.reasons.joinToString("; ")))
         }
-        exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest, ErrorBody("bad_request")) }
+        exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest, ErrorBody("bad_request", "Bad request")) }
         exception<UnsupportedMediaTypeException> { call, _ ->
-            call.respond(HttpStatusCode.UnsupportedMediaType, ErrorBody("unsupported_media_type"))
+            call.respond(HttpStatusCode.UnsupportedMediaType, ErrorBody("unsupported_media_type", "Unsupported media type"))
         }
         exception<PayloadTooLargeException> { call, _ ->
-            call.respond(HttpStatusCode.PayloadTooLarge, ErrorBody("payload_too_large"))
+            call.respond(HttpStatusCode.PayloadTooLarge, ErrorBody("payload_too_large", "Payload too large"))
         }
-        exception<OrderNotFound> { call, _ -> call.respond(HttpStatusCode.NotFound, ErrorBody("not_found")) }
+        exception<OrderNotFound> { call, _ -> call.respond(HttpStatusCode.NotFound, ErrorBody("not_found", "Not found")) }
         exception<Throwable> { call, e ->
             if (e is CancellationException) throw e
             call.application.log.error("unhandled", e)
-            call.respond(HttpStatusCode.InternalServerError, ErrorBody("internal_error"))
+            call.respond(HttpStatusCode.InternalServerError, ErrorBody("internal_error", "Internal error"))
         }
     }
 }
@@ -75,7 +75,8 @@ fun Application.errorHandling() {
 ## Notes
 - `StatusPages` `exception<Throwable>` must rethrow `CancellationException`, otherwise cancelled requests turn into 500s (see `coroutines-rethrow-cancellation`).
 - Register handlers for framework client errors such as `BadRequestException` so a malformed request returns 4xx. `StatusPages` picks the closest exception class, so they win over the `Throwable` fallback in any order; without them a malformed request is reported as a 500. `UnsupportedMediaTypeException` does not extend `BadRequestException`, so it needs its own 415 handler; register a handler for each other framework client-error exception you expect the same way.
-- Use RFC 9457 field names (`type`, `title`, `detail`) in `ErrorBody` for consistency with other services.
+- `ErrorBody` uses the RFC 9457 field names (`type`, `title`, `detail`) for consistency with other services.
+- The example assumes the application also installs `ContentNegotiation` with JSON (see `serialization-content-negotiation-explicit-json`); without it `call.receive<NewOrder>()` and `call.respond(ErrorBody(...))` cannot (de)serialize.
 
 ## References
 - [Status pages](https://ktor.io/docs/server-status-pages.html)

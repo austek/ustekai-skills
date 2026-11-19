@@ -11,15 +11,30 @@ tags: [null-safety, java-interop]
 A Java method without nullability annotations returns a platform type `T!`, which the compiler lets you use as either `T` or `T?` without checks. Assign the result to an explicitly typed `val` at the boundary so the null decision is made once, in one place.
 
 ## Bad Example
+```java
+public class JavaApi {
+    public String findName(String id) { return null; }
+}
+```
 ```kotlin
-val name = javaApi.findName(id) // String!, NPE later far from here
-println(name.length)
+fun show(javaApi: JavaApi, id: String) {
+    val name = javaApi.findName(id) // String!, NPE later far from here
+    println(name.length)
+}
 ```
 
 ## Good Example
+```java
+public class JavaApi {
+    public String findName(String id) { return null; }
+}
+```
 ```kotlin
-val name: String = javaApi.findName(id) ?: error("no name for $id")
-val maybe: String? = javaApi.findName(id)
+fun show(javaApi: JavaApi, id: String) {
+    val name: String = javaApi.findName(id) ?: error("no name for $id")
+    val maybe: String? = javaApi.findName(id)
+    println(name.length + (maybe?.length ?: 0))
+}
 ```
 
 ## Notes

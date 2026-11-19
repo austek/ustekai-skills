@@ -8,7 +8,7 @@ tags: [spring, configuration, validation]
 # Bind Configuration to Typed, Validated @ConfigurationProperties [HIGH]
 
 ## Description
-Scattered `@Value("${...}")` strings are untyped, unvalidated and unfindable. Group related settings in one immutable `@ConfigurationProperties` record (Java) or data class (Kotlin) with bean-validation annotations. Boot then fails the context at startup when a value is missing or malformed.
+Targets Spring Boot 4.x (Spring Framework 7). Scattered `@Value("${...}")` strings are untyped, unvalidated and unfindable. Group related settings in one immutable `@ConfigurationProperties` record (Java) or data class (Kotlin) with bean-validation annotations. Boot then fails the context at startup when a value is missing or malformed.
 
 ## Bad Example
 ```java
@@ -18,6 +18,13 @@ Scattered `@Value("${...}")` strings are untyped, unvalidated and unfindable. Gr
 
 ## Good Example
 ```java
+import jakarta.validation.constraints.NotNull;
+import java.net.URI;
+import java.time.Duration;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
+import org.springframework.validation.annotation.Validated;
+
 @ConfigurationProperties("payments")
 @Validated
 public record PaymentsProperties(
@@ -26,6 +33,11 @@ public record PaymentsProperties(
 ) {}
 ```
 ```kotlin
+import java.net.URI
+import java.time.Duration
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.validation.annotation.Validated
+
 @ConfigurationProperties("payments")
 @Validated
 data class PaymentsProperties(

@@ -8,14 +8,24 @@ tags: [spring, web, validation, security]
 # Validate Request DTOs at the Boundary and Never Expose JPA Entities [HIGH]
 
 ## Description
-Bind requests to dedicated DTO records with bean-validation annotations and `@Valid`, and map to the domain inside the service. Return response DTOs, not entities. Binding JSON straight onto an entity allows mass assignment of fields like `role`, and serializing an entity triggers lazy loading and leaks internal columns.
+Targets Spring Boot 4.x (Spring Framework 7). Bind requests to dedicated DTO records with bean-validation annotations and `@Valid`, and map to the domain inside the service. Return response DTOs, not entities. Binding JSON straight onto an entity allows mass assignment of fields like `role`, and serializing an entity triggers lazy loading and leaks internal columns.
 
 ## Bad Example
 ```java
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+@Entity
+class User {
+    @Id String id;
+    String name;
+    String role;
+    String passwordHash;
+}
 
 interface UserRepository extends JpaRepository<User, String> {}
 

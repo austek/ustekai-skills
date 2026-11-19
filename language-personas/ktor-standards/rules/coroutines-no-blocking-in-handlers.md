@@ -12,19 +12,47 @@ Ktor handlers run as coroutines on a small, CPU-sized pool. A blocking JDBC call
 
 ## Bad Example
 ```kotlin
-get("/report") {
-    val rows = jdbc.query("select * from big_table") // blocks the event loop
-    call.respond(rows)
+import io.ktor.server.application.call
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Row(val id: Long)
+
+fun interface BlockingJdbc { fun query(sql: String): List<Row> }
+
+fun Route.reportRoutes(jdbc: BlockingJdbc) {
+    get("/report") {
+        val rows = jdbc.query("select * from big_table") // blocks the event loop
+        call.respond(rows)
+    }
 }
 ```
 
 ## Good Example
 ```kotlin
+import io.ktor.server.application.call
+import io.ktor.server.response.respond
+import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
+import javax.sql.DataSource
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Row(val id: Long)
+
 class ReportRepository(private val db: DataSource, private val io: CoroutineDispatcher = Dispatchers.IO) {
     suspend fun load(): List<Row> = withContext(io) { db.connection.use { /* query */ emptyList() } }
 }
 
-get("/report") { call.respond(repository.load()) }
+fun Route.reportRoutes(repository: ReportRepository) {
+    get("/report") { call.respond(repository.load()) }
+}
 ```
 
 ## Notes

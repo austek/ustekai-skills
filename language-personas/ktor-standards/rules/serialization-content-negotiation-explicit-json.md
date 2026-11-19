@@ -12,17 +12,35 @@ Install `ContentNegotiation` with `json(Json { ... })` and set every option that
 
 ## Bad Example
 ```kotlin
-install(ContentNegotiation) { json() } // default Json: strict on unknown keys, omits defaults
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+
+fun Application.module() {
+    install(ContentNegotiation) { json() } // default Json: strict on unknown keys, encodes defaults
+}
 ```
 
 ## Good Example
 ```kotlin
-install(ContentNegotiation) {
-    json(Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-        explicitNulls = false
-    })
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
+@OptIn(ExperimentalSerializationApi::class)
+fun Application.module() {
+    install(ContentNegotiation) {
+        json(Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+            explicitNulls = false
+        })
+    }
 }
 
 @Serializable

@@ -1,14 +1,14 @@
 ---
 title: Expose Read-Only Collection Types in Public APIs
-impact: MEDIUM
+impact: HIGH
 impactDescription: callers cannot mutate internal state through a returned collection
 tags: [immutability, collections, api-design]
 ---
 
-# Expose Read-Only Collection Types in Public APIs [MEDIUM]
+# Expose Read-Only Collection Types in Public APIs [HIGH]
 
 ## Description
-`List`, `Set` and `Map` are read-only views; `MutableList` and friends are mutable. Accept and return the read-only types. Keep the mutable collection private. A read-only reference can still be downcast on the JVM, so copy with `toList()` when handing out a collection the owner keeps changing.
+`List`, `Set` and `Map` are read-only views; `MutableList` and friends are mutable. Accept and return the read-only types. Keep the mutable collection private. A read-only reference can still be downcast on the JVM, so copy with `toList()` whenever the owner keeps a mutable backing collection, even if it never changes it afterwards.
 
 ## Bad Example
 ```kotlin

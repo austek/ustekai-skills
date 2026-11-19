@@ -25,23 +25,24 @@ class Prices {
 ```kotlin
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
+import kotlinx.coroutines.flow.stateIn
 
 data class Price(val cents: Long) { companion object { val ZERO = Price(0) } }
 data class Quote(val price: Price)
 interface PriceSource { fun quotes(): Flow<Quote> }
 
 class Prices(source: PriceSource, scope: CoroutineScope) {
-    private val _latest = MutableStateFlow(Price.ZERO)
-    val latest: StateFlow<Price> = _latest.asStateFlow()
-
     val shared: SharedFlow<Quote> = source.quotes()
         .shareIn(scope, SharingStarted.WhileSubscribed(5_000), replay = 0)
+
+    val latest: StateFlow<Price> = source.quotes()
+        .map { it.price }
+        .stateIn(scope, SharingStarted.WhileSubscribed(5_000), Price.ZERO)
 }
 ```
 

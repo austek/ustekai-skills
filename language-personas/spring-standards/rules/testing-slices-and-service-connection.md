@@ -47,6 +47,7 @@ class OrderControllerTest {
 ```java
 import static org.assertj.core.api.Assertions.assertThat;
 
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -63,9 +64,13 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 class OrderRepositoryTest {
     @Autowired OrderRepository repository;
 
+    @Autowired EntityManager entityManager;
+
     @Test
     void persistsAnOrder() {
         var saved = repository.save(new Order("book"));
+        entityManager.flush();
+        entityManager.clear();
 
         assertThat(repository.findById(saved.getId())).isPresent();
     }

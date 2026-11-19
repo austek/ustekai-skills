@@ -1,14 +1,14 @@
 ---
 title: Disable Open Session in View and Fetch Explicitly
 impact: HIGH
-impactDescription: removes hidden queries in the view layer and held connections during serialization
+impactDescription: removes hidden queries in the view layer and connections that late lazy loads can hold during serialization
 tags: [spring, jpa, performance]
 ---
 
 # Disable Open Session in View and Fetch Explicitly [HIGH]
 
 ## Description
-Boot enables `spring.jpa.open-in-view` by default, which keeps a JPA session and connection open for the whole request so lazy associations load while the response is serialized. That hides N+1 queries and holds connections under load. Turn it off and load what each use case needs with fetch joins, entity graphs or projections.
+Targets Spring Boot 4.x (Spring Framework 7). Boot enables `spring.jpa.open-in-view` by default, which keeps the JPA persistence context open for the whole request so lazy associations load while the response is serialized. That hides N+1 queries, and each late lazy load can acquire a connection and hold it until the request ends, depending on connection handling. Turn it off and load what each use case needs with fetch joins, entity graphs or projections.
 
 ## Bad Example
 ```yaml
@@ -17,7 +17,12 @@ spring:
     open-in-view: true # default
 ```
 ```java
-List<Order> findAll(); // later: order.getItems().size() in the controller issues N queries
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+interface OrderRepository extends JpaRepository<Order, Long> {
+    List<Order> findAll(); // later: order.getItems().size() in the controller issues N queries
+}
 ```
 
 ## Good Example
@@ -27,11 +32,22 @@ spring:
     open-in-view: false
 ```
 ```java
-@Query("select o from Order o join fetch o.items where o.customerId = :id")
-List<Order> findWithItems(CustomerId id);
+import java.math.BigDecimal;
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+record CustomerId(long value) {}
 
 interface OrderSummary { String getId(); BigDecimal getTotal(); }
-List<OrderSummary> findByCustomerId(CustomerId id);
+
+interface OrderRepository extends JpaRepository<Order, Long> {
+    @Query("select o from Order o join fetch o.items where o.customerId = :id")
+    List<Order> findWithItems(@Param("id") CustomerId id);
+
+    List<OrderSummary> findByCustomerId(CustomerId id);
+}
 ```
 
 ## Notes

@@ -53,7 +53,7 @@ class PricesTest {
 
 ## Notes
 - `test { }` fails if unconsumed events remain when the block ends, so unexpected extra emissions fail the test.
-- Call `awaitComplete()` for a finite flow. Turbine cancels collection when the block ends, so a late extra item is otherwise missed. For a hot flow, assert the intended observation window (for example `expectNoEvents()`) before the block ends.
+- Call `awaitComplete()` for a finite flow. Turbine cancels collection when the block ends, so a late extra item is otherwise missed. For a hot flow, advance the test scheduler through the intended window (`advanceTimeBy(window)` then `runCurrent()`) and only then call `expectNoEvents()`; it checks events already received and does not wait.
 - Use `StateFlow.value` for a quick assertion on current state.
 
 ## References

@@ -8,7 +8,7 @@ tags: [spring, web, errors]
 # Return RFC 9457 Problem Details From a Central @RestControllerAdvice [MEDIUM]
 
 ## Description
-Handle exceptions in one `@RestControllerAdvice` and return `ProblemDetail` (RFC 9457). Map domain exceptions to a status, a stable `type`, and a short `detail`. Log the full exception once, server-side. Never return `e.getMessage()` for unexpected errors or expose stack traces.
+Targets Spring Boot 4.x (Spring Framework 7). Handle exceptions in one `@RestControllerAdvice` and return `ProblemDetail` (RFC 9457). Map domain exceptions to a status, a stable `type`, and a short `detail`. Log the full exception once, server-side. Never return `e.getMessage()` for unexpected errors or expose stack traces.
 
 ## Bad Example
 ```java

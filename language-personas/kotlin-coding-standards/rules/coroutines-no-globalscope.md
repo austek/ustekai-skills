@@ -12,6 +12,16 @@ Every coroutine needs an owner with a bounded lifetime. `GlobalScope.launch` has
 
 ## Bad Example
 ```kotlin
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+
+class Event
+class Handler { suspend fun handle(event: Event) {} }
+
+val handler = Handler()
+
+@OptIn(DelicateCoroutinesApi::class)
 fun onEvent(event: Event) {
     GlobalScope.launch { handler.handle(event) }
 }
@@ -19,6 +29,20 @@ fun onEvent(event: Event) {
 
 ## Good Example
 ```kotlin
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+
+class Event
+class Id
+class Item
+class Handler { suspend fun handle(event: Event) {} }
+class Repository { suspend fun load(id: Id): Item = Item() }
+
+val repository = Repository()
+
 class EventProcessor(private val scope: CoroutineScope, private val handler: Handler) {
     fun onEvent(event: Event) = scope.launch { handler.handle(event) }
 }

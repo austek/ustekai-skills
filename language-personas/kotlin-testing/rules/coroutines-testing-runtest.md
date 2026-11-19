@@ -12,21 +12,59 @@ tags: [coroutines, testing, runTest]
 
 ## Bad Example
 ```kotlin
-@Test
-fun retries() = runBlocking {
-    val result = client.fetchWithRetry() // real delays: slow and flaky
-    assertEquals("ok", result)
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+fun interface Remote { suspend fun call(): String? }
+
+class RetryingClient(
+    private val remote: Remote,
+    private val io: CoroutineDispatcher,
+    private val backoffMs: Long = 1_000,
+) {
+    suspend fun fetchWithRetry(): String = withContext(io) {
+        repeat(3) {
+            remote.call()?.let { return@withContext it }
+            delay(backoffMs)
+        }
+        "ok"
+    }
+}
+
+class RetryTest {
+    private val fake = Remote { null }
+
+    @Test
+    fun retries() = runBlocking {
+        val client = RetryingClient(fake, io = kotlinx.coroutines.Dispatchers.IO)
+        val result = client.fetchWithRetry() // real delays: slow and flaky
+        assertEquals("ok", result)
+    }
 }
 ```
 
 ## Good Example
 ```kotlin
-@Test
-fun retries() = runTest {
-    val client = RetryingClient(fake, io = StandardTestDispatcher(testScheduler))
-    val result = client.fetchWithRetry()
-    assertEquals("ok", result)
-    assertEquals(3_000, currentTime) // virtual time consumed by backoff
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.currentTime
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class RetryTest {
+    private val fake = Remote { null }
+
+    @Test
+    fun retries() = runTest {
+        val client = RetryingClient(fake, io = StandardTestDispatcher(testScheduler))
+        val result = client.fetchWithRetry()
+        assertEquals("ok", result)
+        assertEquals(3_000, currentTime) // virtual time consumed by backoff
+    }
 }
 ```
 
