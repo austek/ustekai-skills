@@ -244,3 +244,41 @@ def test_server_and_session_for_one_repo_get_distinct_tmux_names(tmp_path):
 def test_script_passes_shellcheck():
     result = subprocess.run(["shellcheck", str(SCRIPT)], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stdout
+
+
+ZSH = ["zsh", "-ic", 'claude "$@"', "claude"]
+
+
+def test_account_runs_claude_through_the_shell_function_without_a_config_dir(tmp_path):
+    command, _, _ = _start(tmp_path, extra=("--account", "burst"))
+    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", *ZSH, "--account", "burst", "--remote-control", "my repo"]
+
+
+def test_burst_is_the_burst_account(tmp_path):
+    command, _, _ = _start(tmp_path, extra=("--burst",))
+    assert command[3:] == [*ZSH, "--account", "burst", "--remote-control", "my repo"]
+
+
+def test_with_is_passed_to_the_shell_function(tmp_path):
+    command, _, _ = _start(tmp_path, extra=("--with", "idea,sonarqube"))
+    assert command == ["env", "-u", "CLAUDE_CONFIG_DIR", *ZSH, "--with", "idea,sonarqube", "--remote-control", "my repo"]
+
+
+def test_account_and_with_apply_to_the_server(tmp_path):
+    command, _, _ = _start(tmp_path, extra=("--server", "--account", "work", "--with", "idea"))
+    assert command[3:] == [*ZSH, "--account", "work", "--with", "idea", "remote-control", "--name", "my repo"]
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [("--account", "Bad Name"), ("--with", "a b"), ("--with", "a,,b"), ("--account", "x", "--config-dir", "/tmp")],
+)
+def test_bad_account_or_with_exits_64(tmp_path, extra):
+    (tmp_path / "repo").mkdir()
+    result = subprocess.run([str(SCRIPT), *extra, str(tmp_path / "repo")], capture_output=True, text=True, check=False)
+    assert result.returncode == 64
+
+
+def test_account_and_with_change_the_session_name(tmp_path):
+    names = {_session_name(tmp_path, *extra) for extra in [(), ("--account", "burst"), ("--with", "idea")]}
+    assert len(names) == 3

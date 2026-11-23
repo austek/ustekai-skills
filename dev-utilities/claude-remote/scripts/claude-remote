@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
-# Usage: claude-remote [--root DIR] [--name NAME] [--config-dir DIR] [--server [--spawn MODE]] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>
+# Usage: claude-remote [--root DIR] [--name NAME] [--config-dir DIR | --account NAME | --burst] [--with NAMES] [--server [--spawn MODE]] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>
 set -euo pipefail
 
 root="${CLAUDE_REMOTE_ROOT:-$HOME/Workspace}"
 settings="${CLAUDE_REMOTE_SETTINGS:-}"
 config_dir="${CLAUDE_CONFIG_DIR:-}"
-target=""; rc_name=""; trust=0; boot=""; server=0; spawn=""
+target=""; rc_name=""; trust=0; boot=""; server=0; spawn=""; account=""; with=""; usage_flags="[--root DIR] [--name NAME] [--config-dir DIR | --account NAME | --burst] [--with NAMES] [--server [--spawn MODE]] [--trust] [--install-boot | --uninstall-boot]"
 
 while (( $# )); do
   case "$1" in
     --root) root="${2:?--root needs a directory}"; shift 2 ;;
-    --config-dir) config_dir="${2:?--config-dir needs a directory}"; shift 2 ;;
+    --config-dir) config_dir="${2:?--config-dir needs a directory}"; config_dir_given=1; shift 2 ;;
+    --account) account="${2:?--account needs a name}"; shift 2 ;;
+    --burst) account=burst; shift ;;
+    --with) with="${2:?--with needs a comma-separated list}"; shift 2 ;;
     --name) rc_name="${2:?--name needs a value}"; shift 2 ;;
     --server) server=1; shift ;;
     --spawn) spawn="${2:?--spawn needs a mode}"; shift 2 ;;
@@ -21,7 +24,11 @@ while (( $# )); do
     *) target="$1"; shift ;;
   esac
 done
-[[ -n "$target" ]] || { echo "usage: claude-remote [--root DIR] [--name NAME] [--config-dir DIR] [--server [--spawn MODE]] [--trust] [--install-boot | --uninstall-boot] <repo-name | /full/path>" >&2; exit 64; }
+[[ -n "$target" ]] || { echo "usage: claude-remote $usage_flags <repo-name | /full/path>" >&2; exit 64; }
+[[ -z "$account" || "$account" =~ ^[a-z0-9_-]+$ ]] || { echo "--account may only contain lowercase letters, digits, '_' and '-'" >&2; exit 64; }
+[[ -z "$with" || "$with" =~ ^[A-Za-z0-9_-]+(,[A-Za-z0-9_-]+)*$ ]] || { echo "--with needs names (letters, digits, '_', '-') separated by commas" >&2; exit 64; }
+[[ -z "$account" || -z "${config_dir_given:-}" ]] || { echo "--account/--burst and --config-dir are mutually exclusive" >&2; exit 64; }
+[[ -z "$account" ]] || config_dir=
 case "$spawn" in
   ""|same-dir|worktree|session) ;;
   *) echo "--spawn must be same-dir, worktree or session" >&2; exit 64 ;;
@@ -104,6 +111,8 @@ install_boot() {
   [[ -z "$spawn" ]] || exec_args+=(--spawn "$spawn")
   (( trust )) && exec_args+=(--trust)
   [[ -n "$config_dir" ]] && exec_args+=(--config-dir "$config_dir")
+  [[ -z "$account" ]] || exec_args+=(--account "$account")
+  [[ -z "$with" ]] || exec_args+=(--with "$with")
   exec_args+=("$path")
   local unset_line=""
   [[ -n "$config_dir" ]] || unset_line=$'UnsetEnvironment=CLAUDE_CONFIG_DIR\n'
@@ -150,7 +159,7 @@ name="${rc_name:-${path##*/}}"
   || { echo "--name may only contain letters, digits, '_' and '-'" >&2; exit 64; }
 kind=session; suffix=""
 if (( server )); then kind=server; suffix="-server"; fi
-hash="$(printf %s "$path${config_dir:+$'\n'$config_dir}${suffix:+$'\n'server}" | sha1sum | cut -c1-6)"
+hash="$(printf %s "$path${config_dir:+$'\n'$config_dir}${account:+$'\n'account=$account}${with:+$'\n'with=$with}${suffix:+$'\n'server}" | sha1sum | cut -c1-6)"
 session="claude-${name//[^A-Za-z0-9_-]/_}$suffix-$hash"
 
 case "$boot" in
@@ -175,16 +184,23 @@ else
     [[ -z "$otel_account" ]] || args+=("CLAUDE_OTEL_ACCOUNT=$otel_account")
     args+=("$env_load")
   fi
+  # With --account or --with, claude runs in an interactive zsh so the user's claude function applies the account's API key, OTel env and --with.
+  claude_cmd=(claude)
+  if [[ -n "$account" || -n "$with" ]]; then
+    claude_cmd=(zsh -ic 'claude "$@"' claude)
+    [[ -z "$account" ]] || claude_cmd+=(--account "$account")
+    [[ -z "$with" ]] || claude_cmd+=(--with "$with")
+  fi
   # The server has no single conversation to resume, so it runs without the loop.
   if (( server )); then
-    args+=(claude remote-control --name "$name")
+    args+=("${claude_cmd[@]}" remote-control --name "$name")
     [[ -z "$spawn" ]] || args+=(--spawn "$spawn")
   else
     # The loop keeps the pane after claude exits so Cozempic's typed resume line restarts it; env stays outside
     # it so the resumed claude keeps the account.
     loop="$(find_helper claude-pane-loop)"
     [[ -z "$loop" ]] || args+=("$loop")
-    args+=(claude --remote-control "$name")
+    args+=("${claude_cmd[@]}" --remote-control "$name")
   fi
   [[ -n "$settings" && -f "$settings" ]] && args+=(--settings "$settings")
   tmux new-session -d -s "$session" -c "$path" "$(printf '%q ' "${args[@]}")"
