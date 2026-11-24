@@ -10,6 +10,9 @@ In Claude Code:
 /plugin marketplace add austek/ustekai-skills
 ```
 
+Not sure what you need? See the [catalog](docs/catalog.md): a flowchart that
+maps what you are doing to the right skill, plus pros and cons per plugin.
+
 Then enable whichever plugins you want:
 
 - `language-personas` — Java/Kotlin/Python/Rust/Scala coding-standards, testing,
