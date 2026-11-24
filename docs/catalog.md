@@ -122,7 +122,7 @@ Choose a skill when you want rules applied automatically by context. Choose a co
 | `idea-mcp-tools` | skill | Tool-selection rules when the IntelliJ IDEA MCP server is connected | Useless without that server |
 | `claude-remote` | skill | Start a Remote Control Claude session in tmux, optionally as a systemd user service | Needs tmux; Linux-centric |
 | `claude-settings-split` | skill | Move profile-specific changes out of a shared `settings.json` | Assumes a dotfiles layout with `claude-profiles/` |
-| `/cozempic` | command | Diagnose and prune bloated context | Requires the cozempic plugin |
+| `/cozempic` | command | Diagnose and prune bloated context | Requires the cozempic CLI (`pip install cozempic`) |
 | `/analysis`, `/pr`, `/story` | command | Draft a technical analysis, PR description or user story | Apply voice rules from your project's `CLAUDE.md`; `/pr` uses a fixed Jira-based template, so it suits Jira workflows only |
 
 ## Keeping this page current
