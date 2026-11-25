@@ -103,7 +103,7 @@ One cycle:
 1b. **Rule out an environmental failure (§3c)** for each failed check. A check classed environmental is left
    out of step 2: no fix, no rerun, no push for it.
 2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, passing `--auto <level>` (§4) and naming
-   each environmental check as `--skip-check <name>`. Skip it when every failed check is environmental and no review
+   each environmental check as `--skip-check "<workflow name>/<job name>"`. Skip it when every failed check is environmental and no review
    feedback is open. Require it to
    return after one CI pass or one push, without its §8 re-loop, so this skill counts the cycles and fix rounds.
    For a PR not authored by you and not covered by `--maintainer`, skip this step and only read failures and review
@@ -191,11 +191,16 @@ A failed check is environmental, not caused by the PR, when either signal holds 
    `gh run list --repo <o>/<r> --branch <base> --workflow "<workflow name>" --status completed --limit 1 --json databaseId,url`
    `gh run view <databaseId> --repo <o>/<r> --json jobs --jq '.jobs[] | {name, conclusion, failedStep: ([.steps[] | select(.conclusion=="failure") | .name] | first)}'`
    Read the PR job's failed step the same way, from the run ID in the check's `link`. The signal fires only when the
-   base job of that name failed and its `failedStep` equals the PR job's. A failed base workflow whose job of that
-   name passed, or failed at another step, does not fire it.
-2. It fails at the same step on at least two other open PRs of the repo whose heads differ from this PR's.
-   Read the failed step name from `gh run view <run-id> --log-failed` for each, taking each run ID from the
-   check's `link`, never by branch name.
+   base job of that name failed, its `failedStep` equals the PR job's, and the first error line from `gh run view
+   <run-id> --job <job-id> --log-failed` matches on both runs, with `<job-id>` the matched job's `databaseId` from
+   `gh run view --json jobs`. A failed base workflow whose job of that name passed, failed at
+   another step, or failed with a different error in the same step (a different failing test in a `pytest` step)
+   does not fire it.
+2. It fails at the same step with the same failure evidence on at least two other open PRs of the repo whose heads
+   differ from this PR's. Read the failed step name and the first error line from `gh run view <run-id>
+   --job <job-id> --log-failed` for each, taking the run ID from the check's `link`, never by branch name, and the
+   job ID of the job with the check's name from `gh run view --json jobs`. Different errors in the
+   same step (distinct failing tests in a `pytest` step) do not match.
 
 Either signal needs the read to succeed. A failed read, or a check that exists on no other PR or base run, is not
 environmental: the check goes to `land-pr-oss` as usual.
@@ -413,7 +418,8 @@ line or comment URL that shows it. Keep the report short; do not restate what `l
       approvals stayed with the parent.
 - [ ] CI waited with `gh pr checks --watch` in the background, not a hand-written loop.
 - [ ] Failure logs read before any fix or rerun; no blind retries.
-- [ ] A check failing on the base branch or at the same step on two other PRs got no fix, rerun or push, spent no
+- [ ] A check that satisfies a complete §3c signal (base job, step and first error line; or step and first error
+      line on two other PRs) got no fix, rerun or push, spent no
       cycle, and was reported `WAITING (environmental)` with its evidence; a failed read never classed one (§3c).
 - [ ] `--auto <level>` forwarded to `land-pr-oss`, which classified each unasked push; each was reported with
       SHA and tier. Nothing else pushed or replied to without approval; none on a `--maintainer` PR.

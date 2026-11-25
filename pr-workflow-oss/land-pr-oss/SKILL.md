@@ -5,7 +5,7 @@ description: >-
   fetch reviewer feedback (inline threads + review verdicts), draft fixes, push after confirmation,
   reply to the threads that fix actually addresses (never resolving them), re-checking for docs drift each
   loop. Use for "check my PR", "is my PR green", "address the review comments", or "land this PR".
-argument-hint: "[PR number|URL] [--auto off|low|medium] [--skip-check <name>]... (default: the current branch's PR, auto low)"
+argument-hint: "[PR number|URL] [--auto off|low|medium] [--skip-check \"<workflow>/<job>\"]... (default: the current branch's PR, auto low)"
 ---
 
 # Landing Your Own PR on a Personal/OSS Repo
@@ -74,14 +74,17 @@ for i in $(seq 1 20); do
 done
 EOF
 ```
-`--skip-check <name>` (repeatable) names checks a caller such as `babysit-pr-oss` §3c classed as environmental. Leave
-them out of every step below: no failure-log pull, no fix, no medium fix round, no rerun. Other failing checks are
-handled as usual.
+`--skip-check "<workflow name>/<job name>"` (repeatable) names checks a caller such as `babysit-pr-oss` §3c classed as
+environmental. Match on both parts, because two workflows can each have a job with the same name. Leave the matched
+checks out of every step below: no failure-log pull, no fix, no medium fix round, no rerun. Other failing checks,
+including a same-named job in another workflow, are handled as usual.
 
-For each failing check not named by `--skip-check`, pull the actual failure, not just the red X:
+For each failing check not named by `--skip-check`, pull the actual failure, not just the red X. Select the job, so a
+skipped failing job in the same run adds no log:
 ```bash
 gh run list --repo <owner>/<repo> --branch <branch> --json databaseId,workflowName,conclusion --jq '.[] | select(.conclusion=="failure")'
-gh run view <run-id> --repo <owner>/<repo> --log-failed
+gh run view <run-id> --repo <owner>/<repo> --json jobs --jq '.jobs[] | select(.conclusion=="failure") | {databaseId, name}'
+gh run view <run-id> --repo <owner>/<repo> --job <job-id> --log-failed
 ```
 
 ### Reading failures
