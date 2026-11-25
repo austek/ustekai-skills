@@ -27,19 +27,23 @@ def _parse_line(line: str) -> dict | None:
 def _to_turn(entry: dict) -> Turn | None:
     message = entry.get("message")
     usage = message.get("usage") if isinstance(message, dict) else None
-    if entry.get("type") != "assistant" or not isinstance(usage, dict):
+    if entry.get("type") != "assistant" or entry.get("isSidechain") is True:
         return None
-    return Turn(
+    if not isinstance(usage, dict):
+        return None
+    turn = Turn(
         model=str(message.get("model", "")),
         input=usage.get("input_tokens") or 0,
         cache_write=usage.get("cache_creation_input_tokens") or 0,
         cache_read=usage.get("cache_read_input_tokens") or 0,
         output=usage.get("output_tokens") or 0,
     )
+    return turn if turn.context > 0 else None
 
 
 def load_turns(path: Path) -> list[Turn]:
-    entries = (_parse_line(line) for line in path.read_text().splitlines())
+    text = path.read_text(encoding="utf-8", errors="replace")
+    entries = (_parse_line(line) for line in text.split("\n"))
     turns = (_to_turn(e) for e in entries if e is not None)
     return [t for t in turns if t is not None]
 
