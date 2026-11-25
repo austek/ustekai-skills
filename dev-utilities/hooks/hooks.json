@@ -1,5 +1,5 @@
 {
-  "description": "Warn once per session when context crosses CTX_GUARD_THRESHOLD",
+  "description": "Warn once per threshold crossing when context passes CTX_GUARD_THRESHOLD",
   "hooks": {
     "UserPromptSubmit": [
       {

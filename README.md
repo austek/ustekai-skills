@@ -39,7 +39,8 @@ Then enable whichever plugins you want:
   cleanup, code-claim verification, business analysis, HTML diff explanations,
   starting remote Claude sessions in tmux, budgeted sharded repo audits
   (`/audit`, `/full-audit`), and `context-spend` (context cost report plus a
-  once-per-session `UserPromptSubmit` warning at `CTX_GUARD_THRESHOLD`).
+  `UserPromptSubmit` warning once per `CTX_GUARD_THRESHOLD` crossing, plus an
+  optional `statusline` command you wire into your own `statusLine` setting).
 
 ## Update
 

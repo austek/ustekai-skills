@@ -74,7 +74,7 @@
     },
     {
       "name": "dev-utilities",
-      "description": "IDE MCP tool selection, comment cleanup, code-claim verification, business analysis, HTML diff explanations, remote Claude sessions, budgeted repo audits.",
+      "description": "IDE MCP tool selection, comment cleanup, code-claim verification, business analysis, HTML diff explanations, remote Claude sessions, budgeted repo audits, context spend report and guard.",
       "version": "1.12.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",

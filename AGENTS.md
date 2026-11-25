@@ -32,6 +32,7 @@ Every plugin directory has a `version` in `.claude-plugin/marketplace.json`. Bum
 ## Tests and lint
 
 - `claude-remote`: `python3 -m pytest dev-utilities/claude-remote/tests -q`.
+- `context-spend`: `python3 -m pytest dev-utilities/context-spend/tests -q`.
 - `audit`: tests live in `dev-utilities/audit/tests`; new behavior needs one.
 - `pr-workflow-oss`: `python3 -m pytest pr-workflow-oss/tests -q` covers `scripts/babysit_sweep.py` and its `hooks/hooks.json` entry.
 - Shell scripts pass `shellcheck`; Python passes `ruff`.

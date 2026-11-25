@@ -122,7 +122,7 @@ Choose a skill when you want rules applied automatically by context. Choose a co
 | `idea-mcp-tools` | skill | Tool-selection rules when the IntelliJ IDEA MCP server is connected | Useless without that server |
 | `claude-remote` | skill | Start a Remote Control Claude session in tmux, optionally as a systemd user service | Needs tmux; Linux-centric |
 | `claude-settings-split` | skill | Move profile-specific changes out of a shared `settings.json` | Assumes a dotfiles layout with `claude-profiles/` |
-| `context-spend` | skill | Report context cost, estimate the saving from compacting, and warn once per session when context passes a threshold | Costs are estimates from static prices; does not run `/compact` or `/clear` for you |
+| `context-spend` | skill | Report context cost, estimate the saving from compacting, and warn once per threshold crossing when context passes a threshold | Costs are estimates from static prices; does not run `/compact` or `/clear` for you |
 | `/analysis`, `/pr`, `/story` | command | Draft a technical analysis, PR description or user story | Apply voice rules from your project's `CLAUDE.md`; `/pr` uses a fixed Jira-based template, so it suits Jira workflows only |
 
 ## Keeping this page current
