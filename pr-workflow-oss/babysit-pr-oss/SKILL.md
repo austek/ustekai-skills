@@ -186,11 +186,13 @@ Report each posted trigger with its comment URL and the SHA it targeted.
 ### 3c. Environmental failures
 
 A failed check is environmental, not caused by the PR, when either signal holds for the same check name:
-1. The same job fails on the latest completed run of the same workflow on the base branch. Take the workflow name
-   from the failed check, filter by it before limiting, then match the failed check's job by name:
+1. The same job fails at the same step on the latest completed run of the same workflow on the base branch. Take the
+   workflow name from the failed check, filter by it before limiting, then match the failed check's job by name:
    `gh run list --repo <o>/<r> --branch <base> --workflow "<workflow name>" --status completed --limit 1 --json databaseId,url`
-   `gh run view <databaseId> --repo <o>/<r> --json jobs --jq '.jobs[] | {name, conclusion}'`
-   A failed base workflow whose job of that name passed does not fire the signal.
+   `gh run view <databaseId> --repo <o>/<r> --json jobs --jq '.jobs[] | {name, conclusion, failedStep: ([.steps[] | select(.conclusion=="failure") | .name] | first)}'`
+   Read the PR job's failed step the same way, from the run ID in the check's `link`. The signal fires only when the
+   base job of that name failed and its `failedStep` equals the PR job's. A failed base workflow whose job of that
+   name passed, or failed at another step, does not fire it.
 2. It fails at the same step on at least two other open PRs of the repo whose heads differ from this PR's.
    Read the failed step name from `gh run view <run-id> --log-failed` for each, taking each run ID from the
    check's `link`, never by branch name.
