@@ -14,7 +14,7 @@ from ctxlib.usage import latest_context, load_turns
 DEFAULT_THRESHOLD = 150_000
 DEFAULT_WINDOW = 1_000_000
 OVERHEAD_ROWS = 10
-USAGE = "usage: ctxspend.py {report [--session ID] [--threshold N] | guard | statusline}"
+USAGE = "usage: ctxspend.py {report [--session ID] [--threshold N] [--transcript PATH] | guard | statusline}"
 
 
 def env_int(name: str, default: int) -> int:
@@ -36,7 +36,8 @@ def find_session(claude: Path, session_id: str | None, cwd: Path) -> Path | None
     if session_id is not None:
         if not SESSION_ID.fullmatch(session_id):
             return None
-        return next(iter(sorted((claude / "projects").glob(f"*/{session_id}.jsonl"))), None)
+        matches = (claude / "projects").glob(f"*/{session_id}.jsonl")
+        return max(matches, key=lambda p: p.stat().st_mtime, default=None)
     project = claude / "projects" / project_dir_name(cwd)
     files = sorted(project.glob("*.jsonl"), key=lambda p: p.stat().st_mtime)
     return files[-1] if files else None
@@ -82,7 +83,7 @@ def statusline_cmd(stdin: str) -> tuple[int, str]:
     return 0, statusline_text(stdin, env_int("CTX_WINDOW_TOKENS", DEFAULT_WINDOW))
 
 
-def safely(command, stdin: str) -> tuple[int, str]:
+def never_fail(command, stdin: str) -> tuple[int, str]:
     try:
         return command(stdin)
     except Exception:  # noqa: BLE001
@@ -103,9 +104,9 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str], stdin: str) -> tuple[int, str]:
     if argv[:1] == ["guard"]:
-        return safely(guard_cmd, stdin)
+        return never_fail(guard_cmd, stdin)
     if argv[:1] == ["statusline"]:
-        return safely(statusline_cmd, stdin)
+        return never_fail(statusline_cmd, stdin)
     if argv[:1] != ["report"]:
         return 2, USAGE
     try:

@@ -12,11 +12,11 @@ A skill cannot run `/compact` or `/clear`. Print the line for the user to type.
 
 ## check
 
-Run `python3 "${CLAUDE_PLUGIN_ROOT}/context-spend/scripts/ctxspend.py" report` (add `--session <id>` or `--threshold <N>` when asked) and quote the numbers: context size, total, fixed vs growth cost, crossing turn, estimated saving, top overhead items. Say "estimated" when the output does.
+Run `python3 "${CLAUDE_PLUGIN_ROOT}/context-spend/scripts/ctxspend.py" report` (add `--session <id>`, `--threshold <N>` or `--transcript <path>` when asked) and quote the numbers: context size, total, fixed vs growth cost, crossing turn, estimated saving, top overhead items. Say "estimated" when the output does.
 
 ## handoff
 
-1. Write a note to `~/.claude/scratches/handoff-<date>.md`: goal, decisions, open items, files touched, next step.
+1. Tell the user the exact path `~/.claude/scratches/handoff-<date>.md` and a summary of the note's contents (goal, decisions, open items, files touched, next step), then ask before writing it. Write only after the user agrees.
 2. Print `/clear`, then tell the user to paste the note path; or print `claude --resume <session id>` to continue this session elsewhere.
 
 ## compact

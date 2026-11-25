@@ -68,7 +68,7 @@ def test_report_labels_estimate(transcript):
     assert "estimated" in out
 
 
-def test_report_reports_missing_session(tmp_path):
+def test_report_reports_missing_session():
     code, out = ctxspend.main(["report", "--session", "nope"], "")
     assert code == 1
     assert "no session" in out
@@ -84,6 +84,16 @@ def test_find_session_by_id(tmp_path):
     target.parent.mkdir(parents=True)
     target.write_text("")
     assert ctxspend.find_session(tmp_path / "claude", "abc-1", tmp_path) == target
+
+
+def test_find_session_by_id_prefers_newest_duplicate(tmp_path):
+    older = tmp_path / "claude" / "projects" / "a" / "dup.jsonl"
+    newer = tmp_path / "claude" / "projects" / "b" / "dup.jsonl"
+    for path, mtime in ((older, 100), (newer, 200)):
+        path.parent.mkdir(parents=True)
+        path.write_text("")
+        os.utime(path, (mtime, mtime))
+    assert ctxspend.find_session(tmp_path / "claude", "dup", tmp_path) == newer
 
 
 def test_find_session_newest_for_cwd(tmp_path):
