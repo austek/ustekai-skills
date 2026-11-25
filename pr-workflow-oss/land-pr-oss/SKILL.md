@@ -5,7 +5,7 @@ description: >-
   fetch reviewer feedback (inline threads + review verdicts), draft fixes, push after confirmation,
   reply to the threads that fix actually addresses (never resolving them), re-checking for docs drift each
   loop. Use for "check my PR", "is my PR green", "address the review comments", or "land this PR".
-argument-hint: "[PR number|URL] [--auto off|low|medium] (default: the current branch's PR, auto low)"
+argument-hint: "[PR number|URL] [--auto off|low|medium] [--skip-check \"<workflow>/<job>\"]... (default: the current branch's PR, auto low)"
 ---
 
 # Landing Your Own PR on a Personal/OSS Repo
@@ -74,10 +74,17 @@ for i in $(seq 1 20); do
 done
 EOF
 ```
-For each failing check, pull the actual failure, not just the red X:
+`--skip-check "<workflow name>/<job name>"` (repeatable) names checks a caller such as `babysit-pr-oss` §3c classed as
+environmental. Match on both parts, because two workflows can each have a job with the same name. Leave the matched
+checks out of every step below: no failure-log pull, no fix, no medium fix round, no rerun. Other failing checks,
+including a same-named job in another workflow, are handled as usual.
+
+For each failing check not named by `--skip-check`, pull the actual failure, not just the red X. Select the job, so a
+skipped failing job in the same run adds no log:
 ```bash
 gh run list --repo <owner>/<repo> --branch <branch> --json databaseId,workflowName,conclusion --jq '.[] | select(.conclusion=="failure")'
-gh run view <run-id> --repo <owner>/<repo> --log-failed
+gh run view <run-id> --repo <owner>/<repo> --json jobs --jq '.jobs[] | select(.conclusion=="failure") | {databaseId, name}'
+gh run view <run-id> --repo <owner>/<repo> --job <job-id> --log-failed
 ```
 
 ### Reading failures
@@ -213,12 +220,13 @@ batching all pending changes.
 **Caps, per PR in this session.** 3 unasked low pushes, then the next push asks. At `medium`, 3 unasked medium fix
 rounds, then stop and report the cap as hit. The two caps are separate.
 
-**Medium fixes** (only at `medium`, only for a failing check): pull the failing log first and fix the cause it names,
+**Medium fixes** (only at `medium`, only for a failing check not named by `--skip-check`): pull the failing log first and fix the cause it names,
 with no unrelated edits. A fix that would force a design choice, or whose cause is outside the branch (infra outage,
 expired token, missing permission), is blocked, not retried.
 
-**Transient reruns** (any level except `off`): rerun failed jobs once per check when the log shows a transient cause
-(network, runner or registry outage, rate limit). Pull the log first; never rerun blind.
+**Transient reruns** (any level except `off`): rerun failed jobs once per check, except checks named by
+`--skip-check`, when the log shows a transient cause (network, runner or registry outage, rate limit). Pull the log
+first; never rerun blind.
 
 **Report** each unasked push with its SHA, tier and the diff stat that justified it, and for a medium fix the root
 cause.

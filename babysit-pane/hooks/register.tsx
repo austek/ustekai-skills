@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { BabysitState, Entry } from '../types'
-import { detailOf, parseEntry, STATE_DIR, statusOf, titleOf, visible } from './model'
+import { canWake, detailOf, parseEntry, STATE_DIR, statusOf, titleOf, visible, WAKE_COMMAND, wakeArgsOf } from './model'
 
 const PANE = 'babysit-pane'
 const STATUS_COMMAND = 'babysit-pane'
@@ -56,6 +56,12 @@ async function setPane($: EngineInterface, shown: boolean): Promise<void> {
   if (shown) await $.ui.open({ id: PANE, title: 'Babysit' })
   else await $.ui.close({ id: PANE })
   await syncPane($)
+}
+
+async function wake($: EngineInterface, entry: Entry): Promise<void> {
+  await $.command
+    .run({ command: WAKE_COMMAND, args: wakeArgsOf(entry) })
+    .catch(() => $.ui.toast(`Could not run /${WAKE_COMMAND}; install pr-workflow-oss.`))
 }
 
 async function stateText($: EngineInterface): Promise<string> {
@@ -115,9 +121,18 @@ export const register: Register = on => {
         {list.length === 0 && <Text dimColor>No PR is being watched.</Text>}
         {list.map(entry => (
           <Box key={`${entry.repo}#${entry.pr}`} flexDirection="column" marginBottom={1}>
-            <Text color={COLOR[entry.state]} weight="bold">
-              {titleOf(entry)}
-            </Text>
+            <Box justifyContent="space-between">
+              <Text color={COLOR[entry.state]} weight="bold">
+                {titleOf(entry)}
+              </Text>
+              {canWake(entry) && (
+                <Button
+                  key={`wake-${entry.repo}#${entry.pr}`}
+                  label="run now"
+                  onPress={() => void wake($, entry)}
+                />
+              )}
+            </Box>
             {detailOf(entry, now).map((row, i) => (
               <Text key={i} dimColor>{row}</Text>
             ))}
