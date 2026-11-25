@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 
 from conftest import usage_entry
@@ -61,6 +63,50 @@ def test_sidechain_entries_are_skipped(transcript):
     side["isSidechain"] = True
     path = transcript([usage_entry("m", 1, 1, 1, 1), side])
     assert latest_context(path) == 3
+
+
+def test_entries_sharing_message_id_count_once(transcript):
+    same = [usage_entry("m", 1, 2, 3, 4, message_id="a") for _ in range(3)]
+    assert load_turns(transcript(same)) == [Turn("m", 1, 2, 3, 4)]
+
+
+def test_different_message_ids_count_separately(transcript):
+    path = transcript(
+        [usage_entry("m", 1, 1, 1, 1, "a"), usage_entry("m", 2, 2, 2, 2, "b")]
+    )
+    assert len(load_turns(path)) == 2
+
+
+def test_request_id_is_the_fallback_key(transcript):
+    path = transcript(
+        [
+            usage_entry("m", 1, 1, 1, 1, request_id="r"),
+            usage_entry("m", 1, 1, 1, 1, request_id="r"),
+            usage_entry("m", 1, 1, 1, 1, request_id="s"),
+        ]
+    )
+    assert len(load_turns(path)) == 2
+
+
+def test_entries_without_ids_are_all_kept(transcript):
+    path = transcript([usage_entry("m", 1, 1, 1, 1)] * 3)
+    assert len(load_turns(path)) == 3
+
+
+def test_last_entry_per_id_wins_in_first_seen_order(transcript):
+    path = transcript(
+        [
+            usage_entry("m", 1, 0, 0, 1, "a"),
+            usage_entry("m", 2, 0, 0, 1, "b"),
+            usage_entry("m", 3, 0, 0, 9, "a"),
+        ]
+    )
+    assert load_turns(path) == [Turn("m", 3, 0, 0, 9), Turn("m", 2, 0, 0, 1)]
+
+
+def test_deeply_nested_line_is_skipped(transcript):
+    path = transcript([usage_entry("m", 1, 1, 1, 1), "[" * 100000])
+    assert len(load_turns(path)) == 1
 
 
 def test_zero_context_entries_are_skipped(transcript):

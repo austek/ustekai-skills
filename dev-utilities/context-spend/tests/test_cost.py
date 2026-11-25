@@ -60,3 +60,27 @@ def test_saving_counts_turns_after_crossing_against_post_compact_context():
     report = build_report(turns, threshold=5 * M)
     assert report.crossing_turn == 1
     assert report.saving_if_compacted == pytest.approx(3 * 1.995 - 2.02)
+
+
+SESSION = [3 * M, M, 5 * M, 5 * M, 5 * M, 5 * M]
+
+
+def test_base_is_smallest_context_not_first_turn():
+    report = build_report([reads("m-a", n) for n in SESSION], threshold=5 * M)
+    assert report.fixed == pytest.approx(6 * 0.5)
+    assert report.crossing_turn == 2
+    assert report.saving_if_compacted == pytest.approx(3 * 1.995 - 2.02)
+
+
+def test_first_turn_at_or_above_threshold_makes_saving_not_applicable():
+    report = build_report([reads("m-a", n) for n in SESSION], threshold=3 * M)
+    assert report.crossing_turn == 0
+    assert report.saving_if_compacted is None
+
+
+def test_long_context_tier_applies_above_its_limit(monkeypatch):
+    monkeypatch.setattr(cost, "LONG_CONTEXT", {"m-a": (2 * M, Price(10.0, 20.0, 5.0, 100.0))})
+    assert turn_cost(Turn("m-a", 2 * M, 0, 0, 0)) == pytest.approx(2.0)
+    assert turn_cost(Turn("m-a", 2 * M + 1, 0, 0, 0)) == pytest.approx(20.00001)
+    assert turn_cost(Turn("m-b", 3 * M, 0, 0, 0)) == pytest.approx(6.0)
+    assert turn_cost(Turn("m-a", 0, 0, 3 * M, M)) == pytest.approx(15.0 + 100.0)

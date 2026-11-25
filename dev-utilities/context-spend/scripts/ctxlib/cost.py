@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from ctxlib.usage import Turn
@@ -21,6 +23,10 @@ PRICES: dict[str, Price] = {
     "claude-haiku-5-5": Price(0.10, 0.125, 0.01, 0.50),
 }
 
+LONG_CONTEXT: dict[str, tuple[int, Price]] = {
+    "claude-haiku-5-5": (100_000, Price(0.50, 0.625, 0.05, 2.50)),
+}
+
 DEFAULT_PRICE = PRICES["claude-opus-5-5"]
 
 
@@ -31,7 +37,7 @@ class SpendReport:
     growth: float
     turns: int
     crossing_turn: int | None
-    saving_if_compacted: float
+    saving_if_compacted: float | None
     estimated: bool
 
 
@@ -39,12 +45,15 @@ def is_known_model(model: str) -> bool:
     return model in PRICES
 
 
-def price_for(model: str) -> Price:
+def price_for(model: str, context: int = 0) -> Price:
+    limit, long_price = LONG_CONTEXT.get(model, (None, None))
+    if limit is not None and context > limit:
+        return long_price
     return PRICES.get(model, DEFAULT_PRICE)
 
 
 def turn_cost(turn: Turn) -> float:
-    p = price_for(turn.model)
+    p = price_for(turn.model, turn.context)
     paid = (
         turn.input * p.input
         + turn.cache_write * p.cache_write
@@ -54,10 +63,14 @@ def turn_cost(turn: Turn) -> float:
     return paid / PER_MILLION
 
 
+def _base_context(turns: list[Turn]) -> int:
+    return min((t.context for t in turns), default=0)
+
+
 def _fixed_cost(turns: list[Turn]) -> float:
-    base = turns[0].context if turns else 0
+    base = _base_context(turns)
     return sum(
-        min(base, t.context) * price_for(t.model).cache_read for t in turns
+        min(base, t.context) * price_for(t.model, t.context).cache_read for t in turns
     ) / PER_MILLION
 
 
@@ -65,15 +78,17 @@ def _crossing_turn(turns: list[Turn], threshold: int) -> int | None:
     return next((i for i, t in enumerate(turns) if t.context >= threshold), None)
 
 
-def _saving(turns: list[Turn], crossing: int | None) -> float:
+def _saving(turns: list[Turn], crossing: int | None, threshold: int) -> float | None:
     if crossing is None:
         return 0.0
-    post = turns[0].context + POST_COMPACT_OVERHEAD
+    if turns[0].context >= threshold:
+        return None
+    post = _base_context(turns) + POST_COMPACT_OVERHEAD
     avoided = sum(
-        max(t.context - post, 0) * price_for(t.model).cache_read
+        max(t.context - post, 0) * price_for(t.model, t.context).cache_read
         for t in turns[crossing + 1 :]
     )
-    rewrite = post * price_for(turns[crossing].model).cache_write
+    rewrite = post * price_for(turns[crossing].model, post).cache_write
     return max((avoided - rewrite) / PER_MILLION, 0.0)
 
 
@@ -87,6 +102,6 @@ def build_report(turns: list[Turn], threshold: int) -> SpendReport:
         growth=total - fixed,
         turns=len(turns),
         crossing_turn=crossing,
-        saving_if_compacted=_saving(turns, crossing),
+        saving_if_compacted=_saving(turns, crossing, threshold),
         estimated=not all(is_known_model(t.model) for t in turns),
     )

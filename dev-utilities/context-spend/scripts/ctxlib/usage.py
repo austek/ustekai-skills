@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +21,7 @@ class Turn:
 def _parse_line(line: str) -> dict | None:
     try:
         entry = json.loads(line)
-    except json.JSONDecodeError:
+    except (ValueError, RecursionError):
         return None
     return entry if isinstance(entry, dict) else None
 
@@ -41,11 +43,32 @@ def _to_turn(entry: dict) -> Turn | None:
     return turn if turn.context > 0 else None
 
 
+def _call_key(entry: dict) -> str | None:
+    message = entry.get("message")
+    for value in (message.get("id") if isinstance(message, dict) else None, entry.get("requestId")):
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _dedupe(pairs: list[tuple[str | None, Turn]]) -> list[Turn]:
+    slots: list[Turn] = []
+    index: dict[str, int] = {}
+    for key, turn in pairs:
+        if key is not None and key in index:
+            slots[index[key]] = turn
+            continue
+        if key is not None:
+            index[key] = len(slots)
+        slots.append(turn)
+    return slots
+
+
 def load_turns(path: Path) -> list[Turn]:
     text = path.read_text(encoding="utf-8", errors="replace")
-    entries = (_parse_line(line) for line in text.split("\n"))
-    turns = (_to_turn(e) for e in entries if e is not None)
-    return [t for t in turns if t is not None]
+    entries = [e for e in map(_parse_line, text.split("\n")) if e is not None]
+    pairs = [(_call_key(e), _to_turn(e)) for e in entries]
+    return _dedupe([(k, t) for k, t in pairs if t is not None])
 
 
 def latest_context(path: Path) -> int:

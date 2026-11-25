@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -29,7 +32,7 @@ def claude_dir() -> Path:
 
 
 def project_dir_name(cwd: Path) -> str:
-    return str(cwd).replace("/", "-").replace(".", "-")
+    return re.sub(r"[^A-Za-z0-9]", "-", str(cwd))
 
 
 def find_session(claude: Path, session_id: str | None, cwd: Path) -> Path | None:
@@ -47,6 +50,10 @@ def money(value: float) -> str:
     return f"${value:,.2f}"
 
 
+def saving_text(saving: float | None) -> str:
+    return "n/a" if saving is None else money(saving)
+
+
 def format_report(report: SpendReport, context: int, items: list) -> str:
     lines = [
         f"turns: {report.turns}",
@@ -55,7 +62,7 @@ def format_report(report: SpendReport, context: int, items: list) -> str:
         f"fixed: {money(report.fixed)}",
         f"growth: {money(report.growth)}",
         f"crossing turn: {report.crossing_turn if report.crossing_turn is not None else 'none'}",
-        f"estimated saving if compacted there: {money(report.saving_if_compacted)}",
+        f"estimated saving if compacted there: {saving_text(report.saving_if_compacted)}",
         "overhead (approximate tokens):",
     ]
     lines += [f"  {i.tokens:>7,}  {i.kind}  {i.name}" for i in items[:OVERHEAD_ROWS]]

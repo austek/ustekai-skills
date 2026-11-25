@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
@@ -109,6 +111,17 @@ def test_find_session_newest_for_cwd(tmp_path):
 
 def test_project_dir_name_replaces_slash_and_dot():
     assert ctxspend.project_dir_name(Path("/home/a/.dot/b")) == "-home-a--dot-b"
+
+
+def test_project_dir_name_replaces_every_non_alphanumeric():
+    assert ctxspend.project_dir_name(Path("/home/a b/my_proj")) == "-home-a-b-my-proj"
+
+
+def test_report_prints_na_when_saving_is_not_applicable(transcript, monkeypatch):
+    monkeypatch.setenv("CTX_GUARD_THRESHOLD", "1000")
+    path = transcript([usage_entry("claude-opus-5-5", 5000, 0, 0, 1)])
+    _, out = ctxspend.main(["report", "--transcript", str(path)], "")
+    assert "estimated saving if compacted there: n/a" in out
 
 
 def test_bad_env_falls_back_to_default(transcript, monkeypatch):
