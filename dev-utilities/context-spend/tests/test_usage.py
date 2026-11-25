@@ -2,8 +2,86 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from conftest import usage_entry
-from ctxlib.usage import Turn, latest_context, load_turns
+from ctxlib.usage import Turn, latest_context, load_subagent_turns, load_turns
+
+COUNTERS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")
+
+
+@pytest.mark.parametrize("field", COUNTERS)
+@pytest.mark.parametrize("bad", ["5", -1, True, 1.5])
+def test_entry_with_invalid_counter_is_skipped(transcript, field, bad):
+    broken = usage_entry("m", 1, 1, 1, 1)
+    broken["message"]["usage"][field] = bad
+    path = transcript([broken, usage_entry("m", 2, 0, 0, 1)])
+    assert load_turns(path) == [Turn("m", 2, 0, 0, 1)]
+
+
+def test_null_counter_counts_as_zero(transcript):
+    entry = usage_entry("m", 1, 1, 1, 1)
+    entry["message"]["usage"]["output_tokens"] = None
+    assert load_turns(transcript([entry])) == [Turn("m", 1, 1, 1, 0)]
+
+
+def test_cache_write_1h_is_parsed_from_cache_creation(transcript):
+    path = transcript([usage_entry("m", 1, 10, 0, 1, cache_1h=6)])
+    assert load_turns(path) == [Turn("m", 1, 10, 0, 1, 6)]
+
+
+@pytest.mark.parametrize("bad", ["6", -1, True, 1.5, None])
+def test_invalid_cache_write_1h_counts_as_zero(transcript, bad):
+    path = transcript([usage_entry("m", 1, 10, 0, 1, cache_1h=bad)])
+    assert load_turns(path) == [Turn("m", 1, 10, 0, 1, 0)]
+
+
+def test_cache_write_1h_is_capped_at_cache_write(transcript):
+    path = transcript([usage_entry("m", 1, 10, 0, 1, cache_1h=50)])
+    assert load_turns(path)[0].cache_write_1h == 10
+
+
+def test_cache_creation_that_is_not_an_object_counts_as_zero(transcript):
+    entry = usage_entry("m", 1, 10, 0, 1)
+    entry["message"]["usage"]["cache_creation"] = "x"
+    assert load_turns(transcript([entry])) == [Turn("m", 1, 10, 0, 1, 0)]
+
+
+def test_sidechain_entries_are_skipped_by_default(transcript):
+    path = transcript([usage_entry("m", 1, 0, 0, 1, sidechain=True), usage_entry("m", 2, 0, 0, 1)])
+    assert load_turns(path) == [Turn("m", 2, 0, 0, 1)]
+
+
+def test_include_sidechain_keeps_sidechain_entries(transcript):
+    path = transcript([usage_entry("m", 1, 0, 0, 1, sidechain=True), usage_entry("m", 2, 0, 0, 1)])
+    assert len(load_turns(path, include_sidechain=True)) == 2
+
+
+def write_agent(tmp_path, name, entries):
+    folder = tmp_path / "sess" / "subagents"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / name).write_text("\n".join(json.dumps(e) for e in entries))
+
+
+def test_load_subagent_turns_reads_each_agent_file(tmp_path):
+    main = tmp_path / "sess.jsonl"
+    main.write_text("")
+    write_agent(tmp_path, "agent-a.jsonl", [usage_entry("m", 1, 0, 0, 1, sidechain=True)])
+    write_agent(tmp_path, "agent-b.jsonl", [usage_entry("m", 2, 0, 0, 1, sidechain=True)])
+    (tmp_path / "sess" / "subagents" / "agent-a.meta.json").write_text("{}")
+    assert load_subagent_turns(main) == [[Turn("m", 1, 0, 0, 1)], [Turn("m", 2, 0, 0, 1)]]
+
+
+def test_load_subagent_turns_empty_without_directory(tmp_path):
+    main = tmp_path / "sess.jsonl"
+    main.write_text("")
+    assert load_subagent_turns(main) == []
+
+
+def test_latest_context_ignores_subagent_files(tmp_path):
+    main = tmp_path / "sess.jsonl"
+    main.write_text(json.dumps(usage_entry("m", 7, 0, 0, 1)))
+    write_agent(tmp_path, "agent-a.jsonl", [usage_entry("m", 9000, 0, 0, 1, sidechain=True)])
+    assert latest_context(main) == 7
 
 
 def test_load_turns_reads_usage_fields(transcript):

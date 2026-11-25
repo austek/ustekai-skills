@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pytest
 from ctxlib import cost
-from ctxlib.cost import Price, build_report, turn_cost
+from ctxlib.cost import (
+    Price,
+    SubagentSpend,
+    build_report,
+    build_subagent_spend,
+    turn_cost,
+)
 from ctxlib.usage import Turn
 
 M = 1_000_000
@@ -78,6 +84,34 @@ def test_first_turn_at_or_above_threshold_makes_saving_not_applicable():
     report = build_report([reads("m-a", n) for n in SESSION], threshold=3 * M)
     assert report.crossing_turn == 0
     assert report.saving_if_compacted is None
+
+
+def test_one_hour_cache_writes_cost_double_the_input_rate(monkeypatch):
+    monkeypatch.setitem(cost.PRICES, "m-c", Price(1.0, 1.25, 0.1, 5.0))
+    assert turn_cost(Turn("m-c", 0, M, 0, 0, cache_write_1h=M // 2)) == pytest.approx(1.625)
+    assert turn_cost(Turn("m-c", 0, M, 0, 0, cache_write_1h=M)) == pytest.approx(2.0)
+    assert turn_cost(Turn("m-c", 0, M, 0, 0)) == pytest.approx(1.25)
+
+
+def test_one_hour_cache_writes_use_long_context_input_rate(monkeypatch):
+    monkeypatch.setattr(cost, "LONG_CONTEXT", {"m-a": (2 * M, Price(10.0, 20.0, 5.0, 100.0))})
+    assert turn_cost(Turn("m-a", 0, 3 * M, 0, 0, cache_write_1h=M)) == pytest.approx(60.0)
+
+
+def test_subagent_spend_sums_files_and_counts_agents():
+    files = [[Turn("m-a", M, 0, 0, 0)], [Turn("m-b", M, 0, 0, 0), Turn("m-b", M, 0, 0, 0)]]
+    spend = build_subagent_spend(files)
+    assert spend == SubagentSpend(total=pytest.approx(5.0), agents=2, estimated=False)
+
+
+def test_subagent_spend_flags_unknown_models_as_estimated():
+    spend = build_subagent_spend([[Turn("mystery", M, 0, 0, 0)]])
+    assert spend.total == pytest.approx(3.0)
+    assert spend.estimated is True
+
+
+def test_subagent_spend_is_zero_without_files():
+    assert build_subagent_spend([]) == SubagentSpend(total=0.0, agents=0, estimated=False)
 
 
 def test_long_context_tier_applies_above_its_limit(monkeypatch):

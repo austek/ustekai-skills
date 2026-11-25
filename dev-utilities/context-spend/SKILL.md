@@ -12,7 +12,7 @@ A skill cannot run `/compact` or `/clear`. Print the line for the user to type.
 
 ## check
 
-Run `python3 "${CLAUDE_SKILL_DIR}/scripts/ctxspend.py" report --session "${CLAUDE_SESSION_ID}"` (add `--threshold <N>` when asked; an explicit `--session` or `--transcript` from the user replaces the default) and quote the numbers: context size, total, fixed vs growth cost, crossing turn, estimated saving (`n/a` when the session started above the threshold), top overhead items. Say "estimated" when the output does.
+Run `python3 "${CLAUDE_SKILL_DIR}/scripts/ctxspend.py" report --session "${CLAUDE_SESSION_ID}"` (add `--threshold <N>` when asked; an explicit `--session` or `--transcript` from the user replaces the default) and quote the numbers: `parent`, `subagents` (with agent count) and `total` (parent plus subagents), then the parent-only figures: context size, fixed vs growth cost, crossing turn, estimated saving (`n/a` when the session started above the threshold), top overhead items. Say "estimated" when the output does.
 
 ## handoff
 
@@ -41,7 +41,10 @@ It prints `ctx N%` of `CTX_WINDOW_TOKENS`.
 
 ## Limits
 
-- Prices come from the `claude-api` skill, read 2026-11-25. Every dollar figure is an estimate; unknown models are priced as Opus and the report says "estimated".
+- Prices come from the `claude-api` skill, read 2026-11-25. Every dollar figure is an estimate; unknown models are priced as Opus (parent or subagent) and the report says "estimated".
+- Cache writes use the 5-minute rate (1.25x input); tokens that the transcript reports under `cache_creation.ephemeral_1h_input_tokens` use the 1-hour rate (2x input).
+- Subagent cost comes from `<session id>/subagents/agent-*.jsonl` next to the transcript, `subagents: $0.00 (0 agents)` when there are none. The fixed/growth split, crossing turn, saving, context size, guard and status line cover the parent transcript only.
+- Overhead takes each plugin's directory from `plugins/installed_plugins.json` and falls back to the newest cached version. Project-level plugin settings are not read.
 - Overhead token figures are approximate (characters / 4); quoted frontmatter values slightly overcount (the quote characters count).
 - MCP server size is not estimated, and `.mcp.json` servers supplied by plugins are not listed.
 - The warning appears as a `systemMessage` shown to the user.

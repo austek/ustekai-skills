@@ -9,7 +9,17 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 
-def usage_entry(model, input, cache_write, cache_read, output, message_id=None, request_id=None):
+def usage_entry(
+    model,
+    input,
+    cache_write,
+    cache_read,
+    output,
+    message_id=None,
+    request_id=None,
+    cache_1h=None,
+    sidechain=False,
+):
     entry = {
         "type": "assistant",
         "message": {
@@ -22,6 +32,10 @@ def usage_entry(model, input, cache_write, cache_read, output, message_id=None, 
             },
         },
     }
+    if cache_1h is not None:
+        entry["message"]["usage"]["cache_creation"] = {"ephemeral_1h_input_tokens": cache_1h}
+    if sidechain:
+        entry["isSidechain"] = True
     if message_id is not None:
         entry["message"]["id"] = message_id
     if request_id is not None:

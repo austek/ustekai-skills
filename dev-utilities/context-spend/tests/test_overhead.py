@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 
+import pytest
 from ctxlib.overhead import OverheadItem, frontmatter_chars, rank_overhead
 
 
@@ -106,6 +108,56 @@ def test_ties_sort_by_name(tmp_path):
     (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": {"z": {}, "c": {}}}))
     names = [i.name for i in rank_overhead(tmp_path)]
     assert names == ["a@m", "b@m", "c", "z"]
+
+
+def two_versions(tmp_path):
+    write_settings(tmp_path, {"p@m": True})
+    add_skill(tmp_path, "m", "p", "abcd", "x" * 13, version="1.0.0")
+    add_skill(tmp_path, "m", "p", "abcd", "x" * 33, version="2.0.0")
+    base = tmp_path / "plugins" / "cache" / "m" / "p"
+    os.utime(base / "1.0.0", (100, 100))
+    os.utime(base / "2.0.0", (200, 200))
+    return base
+
+
+def write_installed(tmp_path, content):
+    (tmp_path / "plugins" / "installed_plugins.json").write_text(content)
+
+
+def test_installed_plugins_install_path_wins_over_newest_mtime(tmp_path):
+    base = two_versions(tmp_path)
+    install = {"plugins": {"p@m": [{"installPath": str(base / "1.0.0")}]}}
+    write_installed(tmp_path, json.dumps(install))
+    assert rank_overhead(tmp_path) == [OverheadItem("p@m", "plugin", 5)]
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        None,
+        "{not json",
+        "[]",
+        json.dumps({"plugins": {}}),
+        json.dumps({"plugins": {"p@m": []}}),
+        json.dumps({"plugins": {"p@m": [{}]}}),
+        json.dumps({"plugins": {"p@m": [{"installPath": 7}]}}),
+        json.dumps({"plugins": {"p@m": [{"installPath": "/does/not/exist"}]}}),
+    ],
+)
+def test_falls_back_to_newest_version_directory(tmp_path, content):
+    two_versions(tmp_path)
+    if content is not None:
+        write_installed(tmp_path, content)
+    assert rank_overhead(tmp_path) == [OverheadItem("p@m", "plugin", 10)]
+
+
+def test_install_path_outside_the_cache_is_honoured(tmp_path):
+    two_versions(tmp_path)
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / "skills" / "s").mkdir(parents=True)
+    (elsewhere / "skills" / "s" / "SKILL.md").write_text("---\nname: s\ndescription: abcd\n---\n")
+    write_installed(tmp_path, json.dumps({"plugins": {"p@m": [{"installPath": str(elsewhere)}]}}))
+    assert rank_overhead(tmp_path) == [OverheadItem("p@m", "plugin", 2)]
 
 
 def test_malformed_files_give_empty_list(tmp_path):

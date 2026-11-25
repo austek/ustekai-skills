@@ -6,6 +6,7 @@ from ctxlib.usage import Turn
 
 PER_MILLION = 1_000_000
 POST_COMPACT_OVERHEAD = 10_000
+ONE_HOUR_WRITE_MULTIPLIER = 2.0
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,13 @@ class SpendReport:
     estimated: bool
 
 
+@dataclass(frozen=True)
+class SubagentSpend:
+    total: float
+    agents: int
+    estimated: bool
+
+
 def is_known_model(model: str) -> bool:
     return model in PRICES
 
@@ -54,13 +62,24 @@ def price_for(model: str, context: int = 0) -> Price:
 
 def turn_cost(turn: Turn) -> float:
     p = price_for(turn.model, turn.context)
+    five_minute = turn.cache_write - turn.cache_write_1h
     paid = (
         turn.input * p.input
-        + turn.cache_write * p.cache_write
+        + five_minute * p.cache_write
+        + turn.cache_write_1h * p.input * ONE_HOUR_WRITE_MULTIPLIER
         + turn.cache_read * p.cache_read
         + turn.output * p.output
     )
     return paid / PER_MILLION
+
+
+def build_subagent_spend(files: list[list[Turn]]) -> SubagentSpend:
+    turns = [t for file_turns in files for t in file_turns]
+    return SubagentSpend(
+        total=sum(turn_cost(t) for t in turns),
+        agents=len(files),
+        estimated=not all(is_known_model(t.model) for t in turns),
+    )
 
 
 def _base_context(turns: list[Turn]) -> int:

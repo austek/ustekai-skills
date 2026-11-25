@@ -67,9 +67,19 @@ def plugin_files(root: Path) -> list[Path]:
     ]
 
 
-def plugin_tokens(cache: Path, key: str) -> int | None:
+def installed_path(claude_dir: Path, key: str) -> Path | None:
+    plugins = read_json(claude_dir / "plugins" / "installed_plugins.json").get("plugins")
+    installs = plugins.get(key) if isinstance(plugins, dict) else None
+    first = installs[0] if isinstance(installs, list) and installs else None
+    value = first.get("installPath") if isinstance(first, dict) else None
+    path = Path(value) if isinstance(value, str) and value else None
+    return path if path is not None and path.is_dir() else None
+
+
+def plugin_tokens(claude_dir: Path, key: str) -> int | None:
     plugin, _, marketplace = key.partition("@")
-    root = latest_version_dir(cache / marketplace / plugin)
+    cache = claude_dir / "plugins" / "cache"
+    root = installed_path(claude_dir, key) or latest_version_dir(cache / marketplace / plugin)
     if root is None:
         return None
     chars = sum(frontmatter_chars(f) for f in plugin_files(root))
@@ -95,10 +105,9 @@ def mcp_names(claude_dir: Path) -> list[str]:
 
 
 def rank_overhead(claude_dir: Path) -> list[OverheadItem]:
-    cache = claude_dir / "plugins" / "cache"
     items = []
     for key in enabled_plugins(claude_dir):
-        tokens = plugin_tokens(cache, key)
+        tokens = plugin_tokens(claude_dir, key)
         if tokens is not None:
             items.append(OverheadItem(key, "plugin", tokens))
     items.extend(OverheadItem(name, "mcp", 0) for name in mcp_names(claude_dir))

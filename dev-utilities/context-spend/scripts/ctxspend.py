@@ -9,10 +9,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from ctxlib.cost import SpendReport, build_report
+from ctxlib.cost import SpendReport, SubagentSpend, build_report, build_subagent_spend
 from ctxlib.guard import SESSION_ID, default_state_dir, guard_message, statusline_text
 from ctxlib.overhead import rank_overhead
-from ctxlib.usage import latest_context, load_turns
+from ctxlib.usage import context_of, load_subagent_turns, load_turns
 
 DEFAULT_THRESHOLD = 150_000
 DEFAULT_WINDOW = 1_000_000
@@ -54,15 +54,30 @@ def saving_text(saving: float | None) -> str:
     return "n/a" if saving is None else money(saving)
 
 
-def format_report(report: SpendReport, context: int, items: list) -> str:
+def estimated_suffix(estimated: bool) -> str:
+    return " (estimated)" if estimated else ""
+
+
+def spend_lines(report: SpendReport, subagents: SubagentSpend) -> list[str]:
+    total = report.total + subagents.total
+    return [
+        f"parent: {money(report.total)}{estimated_suffix(report.estimated)}",
+        f"subagents: {money(subagents.total)} ({subagents.agents} agents)"
+        + estimated_suffix(subagents.estimated),
+        f"total: {money(total)}{estimated_suffix(report.estimated or subagents.estimated)}",
+    ]
+
+
+def format_report(report: SpendReport, subagents: SubagentSpend, context: int, items: list) -> str:
+    crossing = report.crossing_turn if report.crossing_turn is not None else "none"
     lines = [
-        f"turns: {report.turns}",
-        f"context: {context:,} tokens",
-        f"total: {money(report.total)}" + (" (estimated)" if report.estimated else ""),
-        f"fixed: {money(report.fixed)}",
-        f"growth: {money(report.growth)}",
-        f"crossing turn: {report.crossing_turn if report.crossing_turn is not None else 'none'}",
-        f"estimated saving if compacted there: {saving_text(report.saving_if_compacted)}",
+        f"turns (parent): {report.turns}",
+        f"context (parent): {context:,} tokens",
+        *spend_lines(report, subagents),
+        f"fixed (parent): {money(report.fixed)}",
+        f"growth (parent): {money(report.growth)}",
+        f"crossing turn (parent): {crossing}",
+        f"estimated saving if compacted there (parent): {saving_text(report.saving_if_compacted)}",
         "overhead (approximate tokens):",
     ]
     lines += [f"  {i.tokens:>7,}  {i.kind}  {i.name}" for i in items[:OVERHEAD_ROWS]]
@@ -76,9 +91,10 @@ def report_cmd(args: argparse.Namespace) -> tuple[int, str]:
     if path is None or not path.is_file():
         return 1, "no session transcript found"
     threshold = args.threshold or env_int("CTX_GUARD_THRESHOLD", DEFAULT_THRESHOLD)
-    report = build_report(load_turns(path), threshold)
-    items = rank_overhead(claude_dir())
-    return 0, format_report(report, latest_context(path), items)
+    turns = load_turns(path)
+    report = build_report(turns, threshold)
+    subagents = build_subagent_spend(load_subagent_turns(path))
+    return 0, format_report(report, subagents, context_of(turns), rank_overhead(claude_dir()))
 
 
 def guard_cmd(stdin: str) -> tuple[int, str]:
