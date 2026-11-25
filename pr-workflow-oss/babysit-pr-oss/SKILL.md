@@ -103,7 +103,7 @@ One cycle:
 1b. **Rule out an environmental failure (§3c)** for each failed check. A check classed environmental is left
    out of step 2: no fix, no rerun, no push for it.
 2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, passing `--auto <level>` (§4) and naming
-   the environmental checks it must leave alone. Skip it when every failed check is environmental and no review
+   each environmental check as `--skip-check <name>`. Skip it when every failed check is environmental and no review
    feedback is open. Require it to
    return after one CI pass or one push, without its §8 re-loop, so this skill counts the cycles and fix rounds.
    For a PR not authored by you and not covered by `--maintainer`, skip this step and only read failures and review
