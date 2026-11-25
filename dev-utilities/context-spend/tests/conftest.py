@@ -1,0 +1,34 @@
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+
+
+def usage_entry(model, input, cache_write, cache_read, output):
+    return {
+        "type": "assistant",
+        "message": {
+            "model": model,
+            "usage": {
+                "input_tokens": input,
+                "cache_creation_input_tokens": cache_write,
+                "cache_read_input_tokens": cache_read,
+                "output_tokens": output,
+            },
+        },
+    }
+
+
+def write_transcript(tmp_path, entries):
+    path = tmp_path / "transcript.jsonl"
+    lines = [e if isinstance(e, str) else json.dumps(e) for e in entries]
+    path.write_text("\n".join(lines))
+    return path
+
+
+@pytest.fixture
+def transcript(tmp_path):
+    return lambda entries: write_transcript(tmp_path, entries)
