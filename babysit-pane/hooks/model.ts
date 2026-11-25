@@ -93,6 +93,14 @@ export function ageText(updatedAt: number, now: number): string {
   return minutes < 60 ? `updated ${minutes}m ago` : `updated ${Math.floor(minutes / 60)}h ago`
 }
 
+export const WAKE_COMMAND = 'babysit-pr-oss'
+
+/** The arguments that run one babysit cycle now; the carried flags of a scheduled wake-up are not in the state file, so defaults apply. */
+export const wakeArgsOf = (e: Entry): string => `${e.repo}#${e.pr} --cycles 1`
+
+/** A merged or closed PR has nothing left to wake. */
+export const canWake = (e: Entry): boolean => e.state !== 'CLOSED'
+
 /** The title row of an entry. */
 export const titleOf = (e: Entry): string => `${labelOf(e)} ${e.state}${cycleText(e)}`
 

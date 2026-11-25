@@ -61,6 +61,23 @@ test('the pane lists a watched PR with its state and detail, on every surface', 
   }
 })
 
+test('run now submits the babysit prompt for that PR, and a CLOSED PR has no button', async ($, on) => {
+  const closed = JSON.stringify({ ...JSON.parse(FILE), pr: 98, state: 'CLOSED' })
+  seed(on, { 'austek__dotfiles__97.json': FILE, 'austek__dotfiles__98.json': closed })
+  const ran: { command: string; args: string }[] = []
+  on('command.run', (_, e) => {
+    ran.push({ command: e.command, args: e.args })
+    return { text: '' }
+  })
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await ui.find({ type: 'Button', key: 'wake-austek/dotfiles#98' })).toBeUndefined()
+  await ui.press({ key: 'wake-austek/dotfiles#97' })
+  expect(ran).toEqual([{ command: 'babysit-pr-oss', args: 'austek/dotfiles#97 --cycles 1' }])
+  await ui.unmount()
+})
+
 test('a future updatedAt is capped at the file mtime, so the pane shows the real age', async ($, on) => {
   const future = JSON.stringify({ ...JSON.parse(FILE), updatedAt: NOW + 92 * 3_600_000 })
   seed(on, { 'austek__dotfiles__97.json': future }, NOW - 3 * 3_600_000)

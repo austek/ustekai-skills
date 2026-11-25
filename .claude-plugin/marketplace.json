@@ -28,7 +28,7 @@
     {
       "name": "pr-workflow-oss",
       "description": "Open, review, land, and babysit pull requests on personal or open-source repos.",
-      "version": "1.14.1",
+      "version": "1.15.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",
@@ -40,7 +40,7 @@
     {
       "name": "babysit-pane",
       "description": "A Claude Code pane, band and commands showing the state of the PRs babysit-pr-oss watches, read from ~/.cache/babysit-pr.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": { "name": "austek" },
       "homepage": "https://github.com/austek/ustekai-skills",
       "repository": "https://github.com/austek/ustekai-skills",

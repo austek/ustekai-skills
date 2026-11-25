@@ -100,7 +100,11 @@ One cycle:
 1. **Wait for CI.** Run `gh pr checks <N> --repo <owner>/<repo> --watch` with `run_in_background`, then read its
    output when it finishes. No custom sleep or poll loops for the CI wait. No checks yet after the push settles:
    report that and stop.
-2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, passing `--auto <level>` (§4). Require it to
+1b. **Rule out an environmental failure (§3c)** for each failed check. A check classed environmental is left
+   out of step 2: no fix, no rerun, no push for it.
+2. **Run `land-pr-oss`** on `<owner>/<repo>#N` through the Skill tool, passing `--auto <level>` (§4) and naming
+   the environmental checks it must leave alone. Skip it when every failed check is environmental and no review
+   feedback is open. Require it to
    return after one CI pass or one push, without its §8 re-loop, so this skill counts the cycles and fix rounds.
    For a PR not authored by you and not covered by `--maintainer`, skip this step and only read failures and review
    threads: list the PR's failed checks with `gh pr checks <N> --repo <owner>/<repo> --json name,bucket,link`, take
@@ -179,6 +183,26 @@ answering it releases it: post again after the window reopens. A pending trigger
 reported and left for the user to decide; never repost it unasked. At most one accepted trigger per head SHA.
 Report each posted trigger with its comment URL and the SHA it targeted.
 
+### 3c. Environmental failures
+
+A failed check is environmental, not caused by the PR, when either signal holds for the same check name:
+1. It fails on the latest completed run of the base branch:
+   `gh run list --repo <o>/<r> --branch <base> --status completed --limit 1 --json conclusion,workflowName,url`
+   (match the workflow of the failed check by name).
+2. It fails at the same step on at least two other open PRs of the repo whose heads differ from this PR's.
+   Read the failed step name from `gh run view <run-id> --log-failed` for each, taking each run ID from the
+   check's `link`, never by branch name.
+
+Either signal needs the read to succeed. A failed read, or a check that exists on no other PR or base run, is not
+environmental: the check goes to `land-pr-oss` as usual.
+
+For an environmental check: change nothing, rerun nothing, spend no cycle and no medium fix round. The PR is
+`WAITING (environmental)`, the state file's `next` names the check and which signal fired, and §3b schedules the
+next wake-up as for any `WAITING` PR, so recovery is re-read on every run and the 12-wake-up cap bounds the wait.
+Failed checks that are not environmental keep their normal handling in the same cycle. A later run that no longer
+sees either signal treats the check as a normal failure again, so a failure that stays after the base is green
+still gets fixed. Report the evidence: the base run URL or the other PRs' numbers and the shared step name.
+
 ### 3b. Watch mode (default; `--no-watch` turns it off)
 
 On by default, so a PR that ends `WAITING` is picked up again without the user. It keeps running, and pushing at the
@@ -249,7 +273,7 @@ report says which one.
 | State | Condition | Action |
 | --- | --- | --- |
 | `READY` | All checks pass, `mergeStateStatus` is `CLEAN`, no pending drafted reply, and the §5a gate is clear | Report; merge only under §5c |
-| `WAITING` | Checks pass; waiting on a reviewer or maintainer, or a review bot has not reviewed the head commit. In watch mode (§3b) also: a wake-up spent its one cycle, checks still fail and cycles left remain | Report who and since when, or what is still red |
+| `WAITING` | Checks pass; waiting on a reviewer or maintainer, or a review bot has not reviewed the head commit. In watch mode (§3b) also: a wake-up spent its one cycle, checks still fail and cycles left remain; or every failing check is environmental (§3c) | Report who and since when, or what is still red |
 | `BLOCKED` | Needs approval (§4), conflicts, debatable comment, infra or auth failure, design decision | Report the blocker with evidence |
 | `EXHAUSTED` | `--cycles` used, or the medium fix cap hit, with checks still failing | Report what is still red and the last root cause |
 | `CLOSED` | PR merged or closed | Report; stop |
@@ -326,7 +350,16 @@ Status surfaces (the `babysit-pane` plugin's pane and commands, a tmux `status-r
 file per watched PR, so none of them call `gh`. Write it at the end of §2 once targets resolve, after each §3 step 0, 1, 2 and 3, and on
 every §5 state change, report-only PRs included. Write `CLOSED` when the PR merges or closes. On a repo or owner
 target, also run `gh pr view` for each state file in that scope whose PR the open list omitted, and write `CLOSED`
-when GitHub reports it closed or merged. Delete nothing: readers drop stale files themselves.
+when GitHub reports it closed or merged. A `SessionStart` hook (`scripts/babysit_sweep.py`) does the same for up to 40
+unclosed state files per run, most recently written first, when a session starts or resumes, so a PR that merged after its last run does not stay on the
+pane.
+
+Retention, the one bounded exception to "delete nothing": a `CLOSED` state file stays `$BABYSIT_PURGE_HOURS` hours
+(default 24; a missing, non-numeric, non-positive or non-finite value means 24), measured from the newer of its `updatedAt` and
+its mtime. At the end of §2, delete each `~/.cache/babysit-pr/*.json` that is a regular file (not a symlink), reads
+`CLOSED` and is older than that, with `rm -f` on its exact path; touch no other file or directory. The hook reads
+the same variable and does the same when no run happens. Every other state file stays: readers drop stale ones
+themselves.
 
 Path: `~/.cache/babysit-pr/<owner>__<repo>__<N>.json`, with owner and repo lower-cased (GitHub names ignore case).
 Create the directory when missing and keep it owner-only (`mkdir -p -m 700`, and `chmod 700` when it exists). Write
@@ -375,12 +408,15 @@ line or comment URL that shows it. Keep the report short; do not restate what `l
       approvals stayed with the parent.
 - [ ] CI waited with `gh pr checks --watch` in the background, not a hand-written loop.
 - [ ] Failure logs read before any fix or rerun; no blind retries.
+- [ ] A check failing on the base branch or at the same step on two other PRs got no fix, rerun or push, spent no
+      cycle, and was reported `WAITING (environmental)` with its evidence; a failed read never classed one (§3c).
 - [ ] `--auto <level>` forwarded to `land-pr-oss`, which classified each unasked push; each was reported with
       SHA and tier. Nothing else pushed or replied to without approval; none on a `--maintainer` PR.
 - [ ] Review rounds counted toward neither `--cycles` nor the medium cap.
 - [ ] State file written atomically after each step and on every state change, `CLOSED` on merge or close; one
       notification on a change into `READY`, `BLOCKED` or `EXHAUSTED`, none for `WAITING`; `next` holds no
-      copied PR or bot text (§5b).
+      copied PR or bot text (§5b). Only `CLOSED` files older than `$BABYSIT_PURGE_HOURS` hours (default 24) were deleted,
+      by exact path, and no other file or directory (§5b).
 - [ ] §5a gate read against the current head SHA before declaring `READY` or merging at the user's request: no
       unresolved threads, no undismissed `CHANGES_REQUESTED`, every review and inline comment read across all pages,
       Sonar issues, Sonar hotspots and code-scanning alerts at zero, no `skipping` or missing check for a configured

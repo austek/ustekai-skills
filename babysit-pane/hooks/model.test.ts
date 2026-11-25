@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Entry } from '../types'
-import { ageText, detailOf, parseEntry, statusOf, untilText, visible } from './model'
+import { ageText, canWake, detailOf, parseEntry, statusOf, untilText, visible, wakeArgsOf } from './model'
 
 const NOW = 1_800_000_000_000
 const MIN = 60_000
@@ -97,6 +97,12 @@ test('the age reads in minutes then hours, and a future timestamp reads as clock
   expect(ageText(NOW - 59 * MIN, NOW)).toBe('updated 59m ago')
   expect(ageText(NOW - 135 * MIN, NOW)).toBe('updated 2h ago')
   expect(ageText(NOW + 4 * 24 * 60 * MIN, NOW)).toBe('clock skew')
+})
+
+test('the wake prompt targets one PR for one cycle, and only open PRs can be woken', () => {
+  expect(wakeArgsOf(entry({ repo: 'austek/dotfiles', pr: 97 }))).toBe('austek/dotfiles#97 --cycles 1')
+  expect(canWake(entry({ state: 'WAITING' }))).toBe(true)
+  expect(canWake(entry({ state: 'CLOSED' }))).toBe(false)
 })
 
 test('the status entry names the first entry and counts the rest', () => {
