@@ -186,9 +186,11 @@ Report each posted trigger with its comment URL and the SHA it targeted.
 ### 3c. Environmental failures
 
 A failed check is environmental, not caused by the PR, when either signal holds for the same check name:
-1. It fails on the latest completed run of the base branch:
-   `gh run list --repo <o>/<r> --branch <base> --status completed --limit 1 --json conclusion,workflowName,url`
-   (match the workflow of the failed check by name).
+1. The same job fails on the latest completed run of the same workflow on the base branch. Take the workflow name
+   from the failed check, filter by it before limiting, then match the failed check's job by name:
+   `gh run list --repo <o>/<r> --branch <base> --workflow "<workflow name>" --status completed --limit 1 --json databaseId,url`
+   `gh run view <databaseId> --repo <o>/<r> --json jobs --jq '.jobs[] | {name, conclusion}'`
+   A failed base workflow whose job of that name passed does not fire the signal.
 2. It fails at the same step on at least two other open PRs of the repo whose heads differ from this PR's.
    Read the failed step name from `gh run view <run-id> --log-failed` for each, taking each run ID from the
    check's `link`, never by branch name.
@@ -273,7 +275,7 @@ report says which one.
 | State | Condition | Action |
 | --- | --- | --- |
 | `READY` | All checks pass, `mergeStateStatus` is `CLEAN`, no pending drafted reply, and the §5a gate is clear | Report; merge only under §5c |
-| `WAITING` | Checks pass; waiting on a reviewer or maintainer, or a review bot has not reviewed the head commit. In watch mode (§3b) also: a wake-up spent its one cycle, checks still fail and cycles left remain; or every failing check is environmental (§3c) | Report who and since when, or what is still red |
+| `WAITING` | Checks pass; waiting on a reviewer or maintainer, or a review bot has not reviewed the head commit. In watch mode (§3b) also: a wake-up spent its one cycle, checks still fail and cycles left remain. In any mode: every failing check is environmental (§3c) | Report who and since when, or what is still red; for environmental failures, the evidence (§3c) |
 | `BLOCKED` | Needs approval (§4), conflicts, debatable comment, infra or auth failure, design decision | Report the blocker with evidence |
 | `EXHAUSTED` | `--cycles` used, or the medium fix cap hit, with checks still failing | Report what is still red and the last root cause |
 | `CLOSED` | PR merged or closed | Report; stop |
@@ -357,7 +359,8 @@ pane.
 Retention, the one bounded exception to "delete nothing": a `CLOSED` state file stays `$BABYSIT_PURGE_HOURS` hours
 (default 24; a missing, non-numeric, non-positive or non-finite value means 24), measured from the newer of its `updatedAt` and
 its mtime. At the end of §2, delete each `~/.cache/babysit-pr/*.json` that is a regular file (not a symlink), reads
-`CLOSED` and is older than that, with `rm -f` on its exact path; touch no other file or directory. The hook reads
+`CLOSED` and is older than that: read it again right before `rm -f` on its exact path and skip it when its text
+changed since the first read; touch no other file or directory. The hook reads
 the same variable and does the same when no run happens. Every other state file stays: readers drop stale ones
 themselves.
 
