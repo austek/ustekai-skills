@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import errno
 import json
+import os
 import stat
 
 import pytest
@@ -150,3 +152,31 @@ def test_default_state_dir_falls_back_to_home(monkeypatch, tmp_path):
     monkeypatch.delenv("XDG_STATE_HOME", raising=False)
     monkeypatch.setenv("HOME", str(tmp_path))
     assert default_state_dir() == tmp_path / ".local" / "state" / "ctx-spend"
+
+
+class FailingHandle:
+    def __init__(self, fd):
+        self.fd = fd
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        os.close(self.fd)
+        return False
+
+    def write(self, text):
+        raise OSError(errno.ENOSPC, "no space")
+
+
+def test_failed_marker_write_removes_marker_and_returns_false(monkeypatch, tmp_path):
+    marker = tmp_path / "state" / "warned" / "s1"
+    monkeypatch.setattr(guard.os, "fdopen", lambda fd, mode: FailingHandle(fd))
+    assert guard._create_marker(marker, 5) is False
+    assert not marker.exists()
+
+
+def test_successful_marker_write_keeps_token_text(tmp_path):
+    marker = tmp_path / "state" / "warned" / "s1"
+    assert guard._create_marker(marker, 5) is True
+    assert marker.read_text() == "5"

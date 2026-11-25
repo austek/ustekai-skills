@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from ctxlib.overhead import OverheadItem, rank_overhead
+from ctxlib.overhead import OverheadItem, frontmatter_chars, rank_overhead
 
 
 def write_settings(claude_dir, plugins):
@@ -23,6 +23,32 @@ def test_plugin_tokens_estimate_from_skill_frontmatter_chars(tmp_path):
     add_skill(tmp_path, "m", "p", "abcd", "x" * 13)
     items = rank_overhead(tmp_path)
     assert items == [OverheadItem("p@m", "plugin", 5)]
+
+
+def write_md(tmp_path, body):
+    path = tmp_path / "x.md"
+    path.write_text(body)
+    return path
+
+
+def test_literal_block_scalar_counts_indented_lines(tmp_path):
+    path = write_md(tmp_path, "---\nname: ab\ndescription: |\n  hello\n  world!\n---\nbody\n")
+    assert frontmatter_chars(path) == 2 + 5 + 6
+
+
+def test_folded_block_scalar_counts_indented_lines(tmp_path):
+    path = write_md(tmp_path, "---\nname: ab\ndescription: >-\n  hello\n  world!\n---\n")
+    assert frontmatter_chars(path) == 2 + 5 + 6
+
+
+def test_single_line_value_unchanged(tmp_path):
+    path = write_md(tmp_path, "---\nname: ab\ndescription: hello\nother: zzzz\n---\n")
+    assert frontmatter_chars(path) == 7
+
+
+def test_block_scalar_ends_where_indentation_ends(tmp_path):
+    path = write_md(tmp_path, "---\ndescription: |\n  hello\n\n  there\nother: zzzz\n  nope\n---\n")
+    assert frontmatter_chars(path) == 5 + 5
 
 
 def test_command_and_agent_frontmatter_counts(tmp_path):

@@ -55,8 +55,12 @@ def _create_marker(marker: Path, tokens: int) -> bool:
         fd = os.open(marker, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except OSError:
         return False
-    with os.fdopen(fd, "w") as handle:
-        handle.write(str(tokens))
+    try:
+        with os.fdopen(fd, "w") as handle:
+            handle.write(str(tokens))
+    except OSError:
+        _rearm(marker)
+        return False
     return True
 
 

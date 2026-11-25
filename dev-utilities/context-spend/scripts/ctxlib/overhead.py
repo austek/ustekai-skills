@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 CHARS_PER_TOKEN = 4
 FRONTMATTER_KEYS = ("name", "description")
+BLOCK_INDICATOR = re.compile(r"[|>][+-]?\d*|[|>]\d*[+-]?")
 
 
 @dataclass(frozen=True)
@@ -31,12 +33,24 @@ def frontmatter_chars(path: Path) -> int:
     if not lines or lines[0].strip() != "---":
         return 0
     total = 0
-    for line in lines[1:]:
+    body = lines[1:]
+    for index, line in enumerate(body):
         if line.strip() == "---":
             break
         key, _, value = line.partition(":")
         if key.strip() in FRONTMATTER_KEYS:
-            total += len(value.strip())
+            total += _value_chars(value.strip(), body[index + 1 :])
+    return total
+
+
+def _value_chars(value: str, following: list[str]) -> int:
+    if not BLOCK_INDICATOR.fullmatch(value):
+        return len(value)
+    total = 0
+    for line in following:
+        if line.strip() and not line[0].isspace():
+            break
+        total += len(line.strip())
     return total
 
 
