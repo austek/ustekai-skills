@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 
 from ctxlib.overhead import OverheadItem, rank_overhead
@@ -60,6 +62,24 @@ def test_mcp_servers_listed_with_zero_tokens(tmp_path):
     write_settings(tmp_path, {})
     (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": {"idea": {"env": {"K": "v"}}}}))
     assert rank_overhead(tmp_path) == [OverheadItem("idea", "mcp", 0)]
+
+
+def test_parent_claude_json_is_used_only_for_a_dot_claude_dir(tmp_path):
+    (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": {"home": {}}}))
+    for name, expected in ((".claude", ["home"]), ("custom", [])):
+        directory = tmp_path / name
+        directory.mkdir()
+        write_settings(directory, {})
+        assert [i.name for i in rank_overhead(directory)] == expected
+
+
+def test_ties_sort_by_name(tmp_path):
+    write_settings(tmp_path, {"b@m": True, "a@m": True})
+    add_skill(tmp_path, "m", "b", "s", "d")
+    add_skill(tmp_path, "m", "a", "s", "d")
+    (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": {"z": {}, "c": {}}}))
+    names = [i.name for i in rank_overhead(tmp_path)]
+    assert names == ["a@m", "b@m", "c", "z"]
 
 
 def test_malformed_files_give_empty_list(tmp_path):

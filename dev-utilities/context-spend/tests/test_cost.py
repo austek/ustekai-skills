@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 from ctxlib import cost
 from ctxlib.cost import Price, build_report, turn_cost

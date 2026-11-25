@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -68,7 +70,10 @@ def enabled_plugins(claude_dir: Path) -> list[str]:
 
 
 def mcp_names(claude_dir: Path) -> list[str]:
-    for path in (claude_dir / ".claude.json", claude_dir.parent / ".claude.json"):
+    candidates = [claude_dir / ".claude.json"]
+    if claude_dir.name == ".claude":
+        candidates.append(claude_dir.parent / ".claude.json")
+    for path in candidates:
         servers = read_json(path).get("mcpServers")
         if isinstance(servers, dict):
             return list(servers)
@@ -83,4 +88,4 @@ def rank_overhead(claude_dir: Path) -> list[OverheadItem]:
         if tokens is not None:
             items.append(OverheadItem(key, "plugin", tokens))
     items.extend(OverheadItem(name, "mcp", 0) for name in mcp_names(claude_dir))
-    return sorted(items, key=lambda i: i.tokens, reverse=True)
+    return sorted(items, key=lambda i: (-i.tokens, i.name))

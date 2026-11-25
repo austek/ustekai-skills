@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import json
 import stat
 
 import pytest
 from conftest import usage_entry, write_transcript
+from ctxlib import guard
 from ctxlib.guard import default_state_dir, guard_message, statusline_text
 
 
@@ -80,6 +83,50 @@ def test_state_dir_created_with_mode_0700(tmp_path, state):
     guard_message(payload("s1", path), 100_000, state)
     assert stat.S_IMODE(state.stat().st_mode) == 0o700
     assert (state / "warned" / "s1").is_file()
+
+
+def test_read_error_leaves_marker_and_warns_nothing(tmp_path, state):
+    marker = state / "warned" / "s1"
+    marker.parent.mkdir(parents=True)
+    marker.write_text("1")
+    assert guard_message(payload("s1", tmp_path / "nope.jsonl"), 100_000, state) is None
+    assert marker.exists()
+
+
+@pytest.mark.parametrize("threshold", [0, -1])
+def test_non_positive_threshold_disables_guard(tmp_path, state, threshold):
+    path = make_transcript(tmp_path, 150_000)
+    assert guard_message(payload("s1", path), threshold, state) is None
+    assert not (state / "warned" / "s1").exists()
+
+
+def test_zero_context_never_warns(tmp_path, state):
+    path = tmp_path / "empty.jsonl"
+    path.write_text("")
+    assert guard_message(payload("s1", path), 1, state) is None
+
+
+def test_lost_marker_race_is_silent(tmp_path, state):
+    path = make_transcript(tmp_path, 150_000)
+    marker = state / "warned" / "s1"
+    marker.parent.mkdir(parents=True)
+    marker.write_text("1")
+    assert guard_message(payload("s1", path), 100_000, state) is None
+
+
+def test_marker_create_os_error_is_silent(tmp_path, state, monkeypatch):
+    path = make_transcript(tmp_path, 150_000)
+
+    def deny(*args, **kwargs):
+        raise PermissionError
+
+    monkeypatch.setattr(guard.os, "open", deny)
+    assert guard_message(payload("s1", path), 100_000, state) is None
+
+
+def test_deeply_nested_stdin_is_silent(state):
+    assert guard_message("[" * 100000, 1, state) is None
+    assert statusline_text("[" * 100000, 1000) == ""
 
 
 def test_statusline_percent_of_window(tmp_path):

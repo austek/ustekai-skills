@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -16,7 +18,7 @@ def default_state_dir() -> Path:
 def _parse(stdin_json: str) -> tuple[str, Path] | None:
     try:
         data = json.loads(stdin_json)
-    except ValueError:
+    except (ValueError, RecursionError):
         return None
     if not isinstance(data, dict):
         return None
@@ -26,11 +28,11 @@ def _parse(stdin_json: str) -> tuple[str, Path] | None:
     return session, Path(path)
 
 
-def _context(path: Path) -> int:
+def _context(path: Path) -> int | None:
     try:
         return latest_context(path)
     except (OSError, TypeError, ValueError):
-        return 0
+        return None
 
 
 def _format(tokens: int) -> str:
@@ -45,14 +47,16 @@ def _message(tokens: int) -> str:
     )
 
 
-def _record(marker: Path, tokens: int) -> bool:
+def _create_marker(marker: Path, tokens: int) -> bool:
     try:
         for directory in (marker.parent.parent, marker.parent):
             directory.mkdir(parents=True, exist_ok=True, mode=0o700)
             directory.chmod(0o700)
-        marker.write_text(str(tokens))
+        fd = os.open(marker, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
     except OSError:
         return False
+    with os.fdopen(fd, "w") as handle:
+        handle.write(str(tokens))
     return True
 
 
@@ -65,17 +69,17 @@ def _rearm(marker: Path) -> None:
 
 def guard_message(stdin_json: str, threshold: int, state_dir: Path) -> str | None:
     parsed = _parse(stdin_json)
-    if parsed is None or not SESSION_ID.fullmatch(parsed[0]):
+    if threshold <= 0 or parsed is None or not SESSION_ID.fullmatch(parsed[0]):
         return None
     session, path = parsed
     tokens = _context(path)
+    if tokens is None:
+        return None
     marker = state_dir / "warned" / session
     if tokens < threshold:
         _rearm(marker)
         return None
-    if marker.exists():
-        return None
-    return _message(tokens) if _record(marker, tokens) else None
+    return _message(tokens) if _create_marker(marker, tokens) else None
 
 
 def statusline_text(stdin_json: str, window: int) -> str:
