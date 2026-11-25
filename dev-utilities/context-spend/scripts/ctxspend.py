@@ -116,7 +116,8 @@ def main(argv: list[str], stdin: str) -> tuple[int, str]:
 
 
 if __name__ == "__main__":
-    data = "" if sys.stdin.isatty() else sys.stdin.read()
+    reads_stdin = sys.argv[1:2] in (["guard"], ["statusline"])
+    data = sys.stdin.read() if reads_stdin else ""
     code, out = main(sys.argv[1:], data)
     if out:
         print(out)

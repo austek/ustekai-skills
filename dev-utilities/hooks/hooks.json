@@ -1,0 +1,16 @@
+{
+  "description": "Warn once per session when context crosses CTX_GUARD_THRESHOLD",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/context-spend/scripts/ctxspend.py\" guard",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

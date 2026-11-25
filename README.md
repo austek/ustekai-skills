@@ -38,7 +38,8 @@ Then enable whichever plugins you want:
 - `dev-utilities` — misc skills: IDE MCP tool selection, comment
   cleanup, code-claim verification, business analysis, HTML diff explanations,
   starting remote Claude sessions in tmux, budgeted sharded repo audits
-  (`/audit`, `/full-audit`).
+  (`/audit`, `/full-audit`), and `context-spend` (context cost report plus a
+  once-per-session `UserPromptSubmit` warning at `CTX_GUARD_THRESHOLD`).
 
 ## Update
 
