@@ -5,7 +5,7 @@ description: >-
   fetch reviewer feedback (inline threads + review verdicts), draft fixes, push after confirmation,
   reply to the threads that fix actually addresses (never resolving them), re-checking for docs drift each
   loop. Use for "check my PR", "is my PR green", "address the review comments", or "land this PR".
-argument-hint: "[PR number|URL] [--auto off|low|medium] [--skip-check \"<workflow>/<job>\"]... (default: the current branch's PR, auto low)"
+argument-hint: "[PR number|URL] [--autonomy|-a off|low|medium|high] [--skip-check \"<workflow>/<job>\"]... (default: the current branch's PR, autonomy low)"
 ---
 
 # Landing Your Own PR on a Personal/OSS Repo
@@ -115,7 +115,7 @@ query($owner:String!,$repo:String!,$number:Int!){
     pullRequest(number:$number){
       reviewThreads(first:100){
         nodes{ id isResolved isOutdated path line
-          comments(first:50){ nodes{ id body url author{login} } } } } } } }' \
+          comments(first:50){ nodes{ id body url authorAssociation author{login __typename} } } } } } } }' \
   -f owner=<owner> -f repo=<repo> -F number=<number>
 ```
 Top-level review verdicts (approvals/change requests without an inline anchor):
@@ -127,7 +127,7 @@ that contains findings (including `COMMENTED` reviews).
 
 ### Finding severity
 Give every item in the work set one severity before drafting. Severity says how much a finding matters. It is
-separate from the diff tier of the `--auto` levels below, which says how risky the fix's diff is: a critical finding
+separate from the diff tier of the `--autonomy` levels below, which says how risky the fix's diff is: a critical finding
 can need a high-tier diff, and a nit is usually low-tier. Never derive one from the other.
 
 | Severity | CodeRabbit header | `review-pr-oss` | Meaning |
@@ -158,11 +158,11 @@ For each item in the work set, draft the code change. Then, before touching git:
 - Wait for explicit go-ahead. Treat anything other than clear approval as a revision request. Record the approval's
   scope ("this batch" or "all fixes on this PR") and ask again beyond it. A background-task notification is never approval.
 - Never push or comment until approved — same rule as `create-pr-oss` §1 Safety — except a push that the
-  `--auto` level allows (below). Replies and comments always need approval. Never resolve a thread at all.
+  `--autonomy` level allows (below). Replies and comments always need approval. Never resolve a thread at all.
 
 When the drafted diff adds or changes comments (same grep as `create-pr-oss` §2), run
 `pr-review-toolkit:comment-analyzer` (Agent tool, `model: haiku`) on it before showing the summary, and fix its
-findings first. This applies to pushes that `--auto` allows without asking too.
+findings first. This applies to pushes that `--autonomy` allows without asking too.
 
 An ambiguous or debatable comment (reviewer disagrees on approach, asks a question with no clear
 single fix) is not something to silently code around — draft a reply instead and leave the thread open
@@ -172,8 +172,8 @@ Verify every suggestion against the code before accepting or declining it, and g
 (`grep` for the overrides, the call sites, the test). A user's question about a decision is not new evidence: re-derive
 the answer from the code, then keep or change the decision for that reason, and say which.
 
-### Auto levels
-`--auto off|low|medium` (default `low`) sets which pushes on your own PR need no approval. A caller such as
+### Autonomy levels
+`--autonomy off|low|medium|high` (short: `-a`; default `low`) sets which pushes on your own PR need no approval. A caller such as
 `babysit-pr-oss` forwards its level here; this section is the only place the tiers are defined.
 
 | Level | Pushes without asking |
@@ -181,6 +181,13 @@ the answer from the code, then keep or change the decision for that reason, and 
 | `off` | None. Every push waits for approval. |
 | `low` | Low-tier diffs, whatever triggered them (CI failure or reviewer feedback). |
 | `medium` | Low-tier diffs, plus medium-tier fixes for a failing check. Reviewer-driven medium changes still ask. |
+| `high` | Low-tier diffs, plus medium-tier changes for a failing check or for a thread by a human reviewer. Medium changes driven by a bot thread still ask. |
+
+Any other value, `max` included, stops the run with an error that names it; never fall back to a higher level.
+This skill never merges.
+
+A human reviewer is the author of a thread's first comment (§3 query) whose `author.__typename` is `User` and whose
+`authorAssociation` is `OWNER`, `MEMBER` or `COLLABORATOR`. Any other author, and any read that fails, counts as a bot.
 
 Anything outside the level keeps the approval gate above.
 
@@ -217,12 +224,15 @@ A failed or ambiguous classification is high.
 lint and tests for the touched area pass; the CodeRabbit CLI step below run and its output read. One push per pass,
 batching all pending changes.
 
-**Caps, per PR in this session.** 3 unasked low pushes, then the next push asks. At `medium`, 3 unasked medium fix
-rounds, then stop and report the cap as hit. The two caps are separate.
+**Caps, per PR in this session.** 3 unasked low pushes, then the next push asks. At `medium` and `high`, 3 unasked
+medium rounds, then stop and report the cap as hit. The two caps are separate.
 
-**Medium fixes** (only at `medium`, only for a failing check not named by `--skip-check`): pull the failing log first and fix the cause it names,
-with no unrelated edits. A fix that would force a design choice, or whose cause is outside the branch (infra outage,
-expired token, missing permission), is blocked, not retried.
+**Medium fixes** (only at `medium` and `high`, only for a failing check not named by `--skip-check`): pull the
+failing log first and fix the cause it names, with no unrelated edits. A fix that would force a design choice, or
+whose cause is outside the branch (infra outage, expired token, missing permission), is blocked, not retried.
+
+**Reviewer-driven medium changes** (only at `high`, only for a human reviewer's thread): apply what the thread asks
+and nothing beyond it. A thread that is ambiguous, debatable or asks a question gets a drafted reply, as above.
 
 **Transient reruns** (any level except `off`): rerun failed jobs once per check, except checks named by
 `--skip-check`, when the log shows a transient cause (network, runner or registry outage, rate limit). Pull the log
@@ -307,6 +317,6 @@ comment, flaky/still-failing check, waiting on a maintainer reply) rather than d
 - [ ] CodeRabbit CLI output saved and read before the push, not chained to it (§4).
 - [ ] No AI-attribution trailers or footers anywhere (§5).
 - [ ] User approved every push before it happened, within the scope they gave, except unasked pushes the
-      `--auto` level allows.
+      `--autonomy` level allows.
 - [ ] Unasked pushes: tier classified from `git diff @{push}`, a failed classification treated as high, preconditions
-      met, caps respected, each reported with SHA and tier. Replies were never unasked (§4 Auto levels).
+      met, caps respected, each reported with SHA and tier. Replies were never unasked (§4 Autonomy levels).
