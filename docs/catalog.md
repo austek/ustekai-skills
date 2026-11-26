@@ -81,7 +81,7 @@ Choose a skill when you want rules applied automatically by context. Choose a co
 | `create-pr-oss` | skill | Open a PR on a personal or open-source repo | Detects forks and conventions; asks before pushing |
 | `review-pr-oss` | skill | Review any PR, or your own branch with `--branch` or `--uncommitted` | Thorough but spawns several review agents |
 | `land-pr-oss` | skill | Drive one PR to green: read CI logs and feedback, draft fixes, push after confirmation, reply to threads | Asks before pushing and replying, so it needs you present |
-| `babysit-pr-oss` | skill | Run `land-pr-oss` for a bounded number of CI cycles across a PR, repo, user or org | Costs tokens while CI runs; merges only at `--autonomy max` |
+| `babysit-pr-oss` | skill | Run `land-pr-oss` for a bounded number of CI cycles across a PR, repo, user or org | Costs tokens while CI runs; merges only at `--autonomy max` or when you ask |
 | `review-comprehension` | skill | Not user-invoked. `review-pr-oss` adds a predict-and-quiz layer through it | None |
 | `/babysit-pane`, `/babysit-panel` | command | Print watch state; show or hide the pane | Requires `babysit-pane` |
 

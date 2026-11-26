@@ -30,7 +30,7 @@ what this skill may do.
 | `--coderabbit ask\|auto` (short: `-c`) | `auto` | What happens when a PR's CodeRabbit window reopens with the head commit unreviewed (§3a). `auto` posts the trigger unless a guard skips it; `ask` drafts it for approval. |
 | `--no-watch` (short: `-W`) | off | Turn off the default watch (§3b). Otherwise a PR that ends in `WAITING` schedules its own next run until it reaches a terminal state or 12 wake-ups. Report-only PRs (§2) are never rescheduled. |
 | `--include-drafts` (short: `-d`) | off | Include draft PRs when the target is a repo or owner. |
-| short flags | | Case-sensitive: `-a` is `--autonomy`, `-A` is `--author`. `-m` is `--maintainer`, never a merge; only `--autonomy max` merges. |
+| short flags | | Case-sensitive: `-a` is `--autonomy`, `-A` is `--author`. `-m` is `--maintainer`, never a merge; only `--autonomy max` merges without a separate request. |
 | `help` or `?` | | Print this table and the examples below, then stop. Take no other action. |
 
 Examples (print these for `help`):
