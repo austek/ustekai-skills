@@ -23,9 +23,12 @@ Then enable whichever plugins you want:
   and babysit your open PRs across a repo, user, or org (`/babysit-pr-oss`,
   which leaves checks that also fail on the base branch or at the same step on
   two other open PRs alone
-  and reports them as environmental). A session-start hook marks the state
-  file of a merged or closed PR `CLOSED`, so the pane drops it, and deletes
-  `CLOSED` files after `BABYSIT_PURGE_HOURS` hours (default 24).
+  and reports them as environmental). `--autonomy off|low|medium|high|max` sets
+  which pushes need no approval; `high` also pushes medium changes asked for by
+  human reviewers' threads (bot threads still ask), and `max` adds a squash-merge
+  at `READY`. A session-start hook marks the
+  state file of a merged or closed PR `CLOSED`, so the pane drops it, and
+  deletes `CLOSED` files after `BABYSIT_PURGE_HOURS` hours (default 24).
 - `babysit-pane` — a pane and commands (`/babysit-pane` prints the state,
   `/babysit-panel` shows or hides the pane) for the PRs `/babysit-pr-oss`
   watches. Each open PR has a "run now" button that submits
